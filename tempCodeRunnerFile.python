@@ -1,0 +1,55 @@
+import tkinter as tk
+
+class AvailabilityGrid:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Group's Availability")
+        self.selected_slots = {}  # Track which time slots are selected
+
+        # Title and headers
+        self.create_header()
+
+        # Create time slot grid
+        self.create_grid()
+
+    def create_header(self):
+        title_label = tk.Label(self.root, text="Group's Availability", font=('Arial', 14))
+        title_label.grid(row=0, column=0, columnspan=6, pady=10)
+
+        availability_label = tk.Label(self.root, text="0/0 Available")
+        availability_label.grid(row=1, column=2, columnspan=2)
+
+    def create_grid(self):
+        days = ["Wed", "Thu", "Fri", "Sat"]
+        times = ["9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM",
+                 "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"]
+
+        # Create day headers
+        for col, day in enumerate(days, start=1):
+            tk.Label(self.root, text=day, font=('Arial', 12)).grid(row=2, column=col)
+
+        # Create time headers
+        for row, time in enumerate(times, start=3):
+            tk.Label(self.root, text=time).grid(row=row, column=0)
+
+        # Create a grid of buttons
+        for row in range(3, 12):  # 3 is the starting row index for times
+            for col in range(1, 5):  # 1 to 5 is the column index for days
+                btn = tk.Button(self.root, width=10, height=2, bg='gray',
+                                command=lambda r=row, c=col: self.toggle_slot(r, c))
+                btn.grid(row=row, column=col, padx=5, pady=5)
+
+    def toggle_slot(self, row, col):
+        btn = self.root.grid_slaves(row=row, column=col)[0]  # Get button
+        if btn.cget("bg") == "gray":
+            btn.config(bg="green")  # Mark as available
+            self.selected_slots[(row, col)] = True
+        else:
+            btn.config(bg="gray")  # Mark as unavailable
+            self.selected_slots.pop((row, col), None)
+
+
+# Create the main window
+root = tk.Tk()
+app = AvailabilityGrid(root)
+root.mainloop()
