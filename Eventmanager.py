@@ -1,6 +1,6 @@
 class EventManager:
     def __init__(self) -> None:
-        self.events - []
+        self.events = []
 
     def add_event(self, event):
         
