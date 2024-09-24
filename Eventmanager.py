@@ -3,8 +3,9 @@ class EventManager:
         self.events = []
 
     def add_event(self, event):
+        self.events.append(event)
         
-        return
+        return self.events
     
     def edit_event(self, event):
         return
