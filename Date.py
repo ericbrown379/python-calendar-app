@@ -44,3 +44,4 @@ class Date:
             return False
         
     def findTimeIntersection(): #This function should return a list of all the times that everyone is available
+        return
