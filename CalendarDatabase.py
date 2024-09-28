@@ -11,30 +11,30 @@ class CalendarDatabase:
         #cursor cnnects to the db to execute SQL cmds
 
         cursor.execute('''
-                    Create Table If Not Exists user(
-                        username TEXT PRIMARY KEY,
-                        password TEXT NOT NULL
-                    )
-                    ''')
+                        Create Table If Not Exists user(
+                            username TEXT PRIMARY KEY,
+                            password TEXT NOT NULL
+                      )
+                   ''')
 
         cursor.execute('''
-                    Create Table If Not Exists event(
-                        eventName TEXT PRIMARY KEY,
-                        startTime TEXT NOT NULL, 
-                        endTime TEXT NOT NULL,
-                        date TEXT NOT NULL UNIQUE
-                        FOREIGN KEY(username) REFERENCES user(username)
-                    )
-                    ''')
+                        Create Table If Not Exists event(
+                            eventName TEXT PRIMARY KEY,
+                            startTime TEXT NOT NULL, 
+                            endTime TEXT NOT NULL,
+                            date TEXT NOT NULL UNIQUE
+                      )
+                   ''')
                         #START_TIME AND END_TIME stored as ##:## ex) 3:30
                         #DATE stored as 3 char of the date all lowercase ex) sun, mon, thu
 
         cursor.execute('''
-                    Create Table If Not Exists date(
-                       dateName TEXT PRIMARY KEY
-                       FOREIGN KEY(username) REFERENCES user(username)
-                       )
-                        '''
+                        Create Table If Not Exists date(
+                            dateName TEXT PRIMARY KEY,
+                            FOREIGN KEY(username) REFERENCES user(username),
+                            FOREIGN KEY(eventName) REFERENCES event(eventName)
+                      )
+                       '''
         )
         connection.commit()
         connection.close()
@@ -46,11 +46,10 @@ class CalendarDatabase:
         cursor = connection.cursor()
 
         cursor.execute('''
-                    INSERT INTO user
-                        (username, password)
-                        Values(?,?)
-                       ''', (inputUsername, inputPassword)
-                       )
+                        INSERT INTO user
+                            (username, password)
+                            Values(?,?)''', (inputUsername, inputPassword)
+                      )
         
         connection.commit()
         connection.close()
@@ -62,8 +61,9 @@ class CalendarDatabase:
         cursor = connection.cursor()
 
         cursor.execute('''
-                      SELECT * FROM user
-                       ''')
+                       SELECT * FROM user
+                       '''
+                      )
         user = cursor.fetchall()
         print(user)
 
@@ -81,6 +81,17 @@ class CalendarDatabase:
             return True
         else:
             return False
-# IT WORKS!!!
+    
+    def insertEvent(self, inputName:str, inputStart:str, inputEnd:str, inputDate:str):
+        connection = sqlite3.connect('calendar.db')
+        cursor = connection.cursor()
+
+        cursor.execute('''
+                        INSERT INTO event
+                            (eventName, startTime, endTime, date)
+                            Values(?,?,?,?)''',(inputName,inputStart, inputEnd, inputDate)
+                      )
+        
+# IT WORKS!!! 
 myCalendar = CalendarDatabase
 myCalendar.viewUserTable()
