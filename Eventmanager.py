@@ -1,4 +1,4 @@
-import events
+from Event import Event
 
 class EventManager:
     def __init__(self):
@@ -6,14 +6,12 @@ class EventManager:
 
     def add_event(self, event):
         self.events.append(event)
-        return self.events
     
-    def edit_event(self, event_name):
-        if event in self.events:
-            for event in self.events:
-                if event.name == event_name:
-
-                 return event
+    def edit_event(self, event_id, name=None, date=None, start_time=None, end_time=None, description=None):
+        for event in self.events:
+            if event.event_id == event_id:
+                event.update_event(name, date, start_time, end_time, description)
+                return event
     
     def delete_event(self, event):
 
