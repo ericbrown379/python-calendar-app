@@ -11,7 +11,7 @@ class CalendarDatabase:
             connection =  sqlite3.connect('calendar.db')
             cursor = connection.cursor()
 
-            #cursor cnnects to the db to execute SQL cmds
+            #cursor connects to the DataBase to execute SQL Commands
             cursor.execute('''
                             Create Table If Not Exists user(
                                 username TEXT PRIMARY KEY,
