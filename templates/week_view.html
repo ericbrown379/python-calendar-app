@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Weekly Calendar View</title>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mt-5">Weekly Calendar View</h2>
+        
+        <!-- Table layout for weekly calendar -->
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    {% for date, events in weekly_events.items() %}
+                        <th>{{ date.strftime('%A') }}<br>{{ date.strftime('%B %d, %Y') }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% for date, events in weekly_events.items() %}
+                        <td>
+                            {% if events %}
+                                {% for event in events %}
+                                    <strong>{{ event.name }}</strong><br>
+                                    {{ event.start_time }} - {{ event.end_time }}<br>
+                                    <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-sm btn-primary">Edit</a> <!-- Changed event.event_id to event.id -->
+                                    <form action="{{ url_for('delete_event', event_id=event.id) }}" method="POST" style="display:inline;"> <!-- Changed event.event_id to event.id -->
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                    <hr>
+                                {% endfor %}
+                            {% else %}
+                                <p>No events</p>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+
+        <a href="{{ url_for('add_event') }}" class="btn btn-success mt-3">Add Event</a>
+    </div>
+</body>
+</html>
