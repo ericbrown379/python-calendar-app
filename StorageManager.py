@@ -41,6 +41,8 @@ class StorageManager:
     def insert_event(self, event: Event, user_id: int):
         """
         Insert an event into the database.
+        :param event: Event object to insert.
+        :param user_id: ID of the user who owns the event.
         :return: None
         """
         self.cursor.execute('''
@@ -52,6 +54,7 @@ class StorageManager:
     def retrieve_event(self, event_id: int) -> Event:
         """
         Retrieve a single event by event_id.
+        :param event_id: ID of the event to retrieve.
         :return: Event object if found, None if not found.
         """
         self.cursor.execute('SELECT * FROM event WHERE event_id = ?', (event_id,))
@@ -64,6 +67,8 @@ class StorageManager:
     def retrieve_events_by_date(self, user_id: int, date: str):
         """
         Retrieve all events for a user on a specific date.
+        :param user_id: ID of the user.
+        :param date: Date to retrieve events for.
         :return: List of Event objects.
         """
         self.cursor.execute('''
@@ -78,6 +83,8 @@ class StorageManager:
     def retrieve_events(self, user_id: int):
         """
         Retrieve all events for a user.
+        :param user_id: ID of the user.
+        :return: List of Event objects.
         """
         self.cursor.execute('''
             SELECT * FROM event WHERE user_id = ?
@@ -90,6 +97,8 @@ class StorageManager:
     def update_event(self, event: Event):
         """
         Update an event's details in the database.
+        :param event: Updated Event object.
+        :return: None
         """
         self.cursor.execute('''
             UPDATE event
@@ -111,6 +120,7 @@ class StorageManager:
         """
         Get the next available event ID.
         (Only needed if you're manually setting event IDs outside the database)
+        :return: Next available event_id.
         """
         self.cursor.execute('SELECT MAX(event_id) FROM event')
         result = self.cursor.fetchone()
