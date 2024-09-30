@@ -5,6 +5,7 @@ from forms import LoginForm, RegisterForm, EventForm
 from models import User, Event, db
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
+from zoneinfo import ZoneInfo
 import os
 
 app = Flask(__name__)
@@ -19,6 +20,9 @@ login_manager.login_view = 'login'
 
 event_manager = EventManager()
 
+# Define timezone for Eastern Time (US/Michigan)
+eastern = ZoneInfo("America/Detroit")
+
 # Print database information
 print("Database URI:", app.config['SQLALCHEMY_DATABASE_URI'])
 print("Absolute path to database:", os.path.abspath('calendar.db'))
@@ -27,7 +31,21 @@ print("Absolute path to database:", os.path.abspath('calendar.db'))
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Root route, redirect to login or week view depending on if the user is logged in
+# Helper function to convert input times from Eastern Time to UTC for storage
+def convert_time_to_utc(time_obj):
+    """Convert a naive datetime time object (input in Eastern Time) to UTC."""
+    eastern_time = time_obj.replace(tzinfo=eastern)
+    utc_time = eastern_time.astimezone(ZoneInfo('UTC'))
+    return utc_time.strftime('%H:%M:%S')
+
+# Helper function to convert UTC time back to Eastern Time for display
+def convert_time_to_eastern(utc_time_str):
+    """Convert a time string (in 'HH:MM:SS' format) from UTC to Eastern Time and return formatted 'HH:MM AM/PM'."""
+    utc_time = datetime.strptime(utc_time_str, '%H:%M:%S')
+    utc_time = utc_time.replace(tzinfo=ZoneInfo('UTC'))
+    eastern_time = utc_time.astimezone(eastern)
+    return eastern_time.strftime('%I:%M %p')
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -60,7 +78,6 @@ def register():
             return redirect(url_for('login'))
         except Exception as e:
             db.session.rollback()
-            print("Error:", e)
             flash('There was an issue creating your account.', 'danger')
     return render_template('register.html', form=form)
 
@@ -75,37 +92,39 @@ def logout():
 def week_view():
     # Get the current date
     today = date.today()
-    # Calculate the start and end of the week
-    start_of_week = today - timedelta(days=today.weekday())  # Monday
-    end_of_week = start_of_week + timedelta(days=6)  # Sunday
-
+    
+    # Create a range of dates from today to the next 6 days
+    weekly_dates = [today + timedelta(days=i) for i in range(7)]
+    
     # Dictionary to store events by date
     weekly_events = {}
-    
-    # Fetch events for each day in the week range
-    for single_date in (start_of_week + timedelta(n) for n in range(7)):
+
+    # Fetch events for each day in the 7-day range starting from today
+    for single_date in weekly_dates:
         events_for_day = event_manager.get_events_by_date(current_user.id, single_date)
+        # Convert stored UTC times to Eastern Time for display
+        for event in events_for_day:
+            event.start_time = convert_time_to_eastern(event.start_time)
+            event.end_time = convert_time_to_eastern(event.end_time)
         weekly_events[single_date] = events_for_day
 
-    # Pass the weekly_events to the template
     return render_template('week_view.html', weekly_events=weekly_events)
-
 
 @app.route('/add_event', methods=['GET', 'POST'])
 @login_required
 def add_event():
     form = EventForm()
     if form.validate_on_submit():
-        # Convert time objects to strings before storing them
-        start_time_str = form.start_time.data.strftime('%H:%M:%S')
-        end_time_str = form.end_time.data.strftime('%H:%M:%S')
+        # Convert times from Eastern Time to UTC before storing
+        start_time_utc = convert_time_to_utc(form.start_time.data)
+        end_time_utc = convert_time_to_utc(form.end_time.data)
 
         # Add the event for the current user
         event_manager.add_event(
             name=form.name.data,
             date=form.date.data,
-            start_time=start_time_str,
-            end_time=end_time_str,
+            start_time=start_time_utc,
+            end_time=end_time_utc,
             description=form.description.data,
             user_id=current_user.id
         )
@@ -122,20 +141,23 @@ def edit_event(event_id):
         flash("You are not authorized to edit this event.", 'danger')
         return redirect(url_for('week_view'))
 
-    # Convert the date string back to a date object and times back to time objects
-    event.date = datetime.strptime(event.date, '%Y-%m-%d').date()
+    # Convert stored UTC times back to Eastern Time for the form
     event.start_time = datetime.strptime(event.start_time, '%H:%M:%S').time()
     event.end_time = datetime.strptime(event.end_time, '%H:%M:%S').time()
 
     form = EventForm(obj=event)
 
     if form.validate_on_submit():
+        # Convert times from Eastern Time to UTC before saving
+        start_time_utc = convert_time_to_utc(form.start_time.data)
+        end_time_utc = convert_time_to_utc(form.end_time.data)
+
         event_manager.edit_event(
             event_id=event_id,
             name=form.name.data,
             date=form.date.data,
-            start_time=form.start_time.data,
-            end_time=form.end_time.data,
+            start_time=start_time_utc,
+            end_time=end_time_utc,
             description=form.description.data
         )
         flash('Event updated!', 'success')
