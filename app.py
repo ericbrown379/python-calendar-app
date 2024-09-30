@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from forms import LoginForm, RegisterForm, EventForm
 from models import User, Event, db
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from event_manager import EventManager
 import os
 
@@ -117,11 +117,18 @@ def add_event():
 @login_required
 def edit_event(event_id):
     event = event_manager.storage_manager.retrieve_event(event_id)
+
     if event.user_id != current_user.id:
         flash("You are not authorized to edit this event.", 'danger')
         return redirect(url_for('week_view'))
 
+    # Convert the date string back to a date object and times back to time objects
+    event.date = datetime.strptime(event.date, '%Y-%m-%d').date()
+    event.start_time = datetime.strptime(event.start_time, '%H:%M:%S').time()
+    event.end_time = datetime.strptime(event.end_time, '%H:%M:%S').time()
+
     form = EventForm(obj=event)
+
     if form.validate_on_submit():
         event_manager.edit_event(
             event_id=event_id,
@@ -133,10 +140,8 @@ def edit_event(event_id):
         )
         flash('Event updated!', 'success')
         return redirect(url_for('week_view'))
-    return render_template('edit_event.html', form=form, event=event)
 
-print("Database URI:", app.config['SQLALCHEMY_DATABASE_URI'])
-print("Absolute path to database:", os.path.abspath('calendar.db'))
+    return render_template('edit_event.html', form=form, event=event)
 
 @app.route('/delete_event/<int:event_id>', methods=['POST'])
 @login_required

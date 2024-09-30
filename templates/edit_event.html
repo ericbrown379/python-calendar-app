@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h2 class="mt-5">Edit Event</h2>
-        <form method="POST" action="{{ url_for('edit_event', event_id=event.event_id) }}">
+        <form method="POST" action="{{ url_for('edit_event', event_id=event.id) }}"> <!-- Changed to event.id -->
             {{ form.hidden_tag() }}
             <div class="mb-3">
                 {{ form.name.label(class="form-label") }}
