@@ -8,8 +8,19 @@
 </head>
 <body>
     <div class="container">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="{{ url_for('week_view') }}">Home</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-danger" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        
         <h2 class="mt-5">Edit Event</h2>
-        <form method="POST" action="{{ url_for('edit_event', event_id=event.id) }}"> <!-- Changed to event.id -->
+        <form method="POST" action="{{ url_for('edit_event', event_id=event.id) }}">
             {{ form.hidden_tag() }}
             <div class="mb-3">
                 {{ form.name.label(class="form-label") }}
