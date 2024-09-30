@@ -11,18 +11,36 @@
         <h2 class="mt-5">Register</h2>
         <form method="POST" action="{{ url_for('register') }}">
             {{ form.hidden_tag() }}
+            
             <div class="mb-3">
                 {{ form.username.label(class="form-label") }}
                 {{ form.username(class="form-control") }}
+                {% if form.username.errors %}
+                    <div class="text-danger">
+                        {% for error in form.username.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
+            
             <div class="mb-3">
                 {{ form.password.label(class="form-label") }}
                 {{ form.password(class="form-control") }}
+                {% if form.password.errors %}
+                    <div class="text-danger">
+                        {% for error in form.password.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
+            
             <div class="mb-3">
                 {{ form.submit(class="btn btn-primary") }}
             </div>
         </form>
+        
         <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
     </div>
 </body>

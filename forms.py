@@ -1,7 +1,12 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField
-from wtforms.validators import DataRequired, Length
+from wtforms.validators import DataRequired, Length, ValidationError, Regexp
 
+# Custom validator to check for forbidden characters
+def check_forbidden_characters(form, field):
+    forbidden_characters = set("#$%^&*(){}[]<>?")
+    if any(char in forbidden_characters for char in field.data):
+        raise ValidationError("Password contains forbidden characters.")
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -11,7 +16,17 @@ class LoginForm(FlaskForm):
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
+    # Add a regex to ensure one special character (excluding forbidden ones)
+    password = PasswordField(
+        'Password', 
+        validators=[
+            DataRequired(),
+            # Ensure at least one special character
+            Regexp(r'^(?=.*[!@#$%^&+=])', message="Password must contain at least one special character (!, @, #, etc.)"),
+            # Ensure no forbidden characters are used
+            check_forbidden_characters
+        ]
+    )
     submit = SubmitField('Register')
 
 
