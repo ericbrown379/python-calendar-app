@@ -1,21 +1,49 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField
-from wtforms.validators import DataRequired, Length, ValidationError, Regexp
-
+from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email
+from email_manager import check_email_exists
+from models import User
 # Custom validator to check for forbidden characters
 def check_forbidden_characters(form, field):
     forbidden_characters = set("#$%^&*(){}[]<>?")
     if any(char in forbidden_characters for char in field.data):
         raise ValidationError("Password contains forbidden characters.")
 
+def email_exists(form, field):
+    if not check_email_exists(field.data):
+        print("This email does not exist.")
+        raise ValidationError("This email does not exist.")
+    email_address = field.data 
+    if User.query.filter_by(email=email_address).first(): 
+        raise ValidationError("This email is already registered.")
+    
+def user_exists(form, field):
+    inputusername = field.data
+    # Check if the username already exists in the database
+    if User.query.filter_by(username=inputusername).first() is not None:
+        raise ValidationError("This username is taken.")
+
+def user_does_not_exist(form, field):
+    inputusername = field.data
+    # Check if the username does not exist in the database
+    if User.query.filter_by(username=inputusername).first() is None:
+        raise ValidationError("This username does not exist.")
+    
 class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired(),user_does_not_exist])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    email = StringField(
+        'Email',
+        validators=[
+            DataRequired(),
+            Email(message="Email not valid"), email_exists #Makes sure they entered an email
+        ]
+    )
+    username = StringField('Username', validators=[DataRequired(), user_exists])
     # Add a regex to ensure one special character (excluding forbidden ones)
     password = PasswordField(
         'Password', 
@@ -27,6 +55,7 @@ class RegisterForm(FlaskForm):
             check_forbidden_characters
         ]
     )
+    
     submit = SubmitField('Register')
 
 
