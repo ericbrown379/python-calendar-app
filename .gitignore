@@ -5,6 +5,7 @@ venv/
 __pycache__/
 *.pyc
 
+
 # Ignore SQLite database file
 *.db
 

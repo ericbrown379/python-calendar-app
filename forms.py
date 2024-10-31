@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField, SelectField, SelectMultipleField, RadioField
 from wtforms.validators import DataRequired, Length, ValidationError, Regexp
 
 # Custom validator to check for forbidden characters
@@ -35,5 +35,15 @@ class EventForm(FlaskForm):
     date = DateField('Date', validators=[DataRequired()])
     start_time = TimeField('Start Time', validators=[DataRequired()])
     end_time = TimeField('End Time', validators=[DataRequired()])
+    location_option = RadioField(
+        'Location Option',
+        choices=[('current', 'Use Current Location'), ('address', 'Enter Address')],
+        default='current',
+        validators=[DataRequired()]
+    )
+    address = StringField('Address', validators=[Length(max=255)])  # Optional address
+    location = SelectField('Suggested Locations', choices=[], validators=[DataRequired()])
+    required_attendees = SelectMultipleField('Required Attendees (Usernames)', choices=[], coerce=int)
+    optional_attendees = SelectMultipleField('Optional Attendees (Usernames)', choices=[], coerce=int)
     description = TextAreaField('Description', validators=[Length(max=500)])
     submit = SubmitField('Submit')
