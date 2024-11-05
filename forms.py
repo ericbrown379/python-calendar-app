@@ -5,11 +5,13 @@ from email_manager import check_email_exists
 from models import User
 # Custom validator to check for forbidden characters
 def check_forbidden_characters(form, field):
+    """Checks password forbidden characters"""
     forbidden_characters = set("#$%^&*(){}[]<>?")
     if any(char in forbidden_characters for char in field.data):
         raise ValidationError("Password contains forbidden characters.")
 
 def email_exists(form, field):
+    """Utilizes the email checks from email_manager for validation in the email form field"""
     if not check_email_exists(field.data):
         print("This email does not exist.")
         raise ValidationError("This email does not exist.")
@@ -18,19 +20,21 @@ def email_exists(form, field):
         raise ValidationError("This email is already registered.")
     
 def user_exists(form, field):
+    """Does a simple query in the User model to check if the username already exists in the DB"""
     inputusername = field.data
     # Check if the username already exists in the database
     if User.query.filter_by(username=inputusername).first() is not None:
         raise ValidationError("This username is taken.")
 
 def user_does_not_exist(form, field):
+    """Checks if the username doesn't exist in the user model"""
     inputusername = field.data
     # Check if the username does not exist in the database
     if User.query.filter_by(username=inputusername).first() is None:
         raise ValidationError("This username does not exist.")
     
 class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(),user_does_not_exist])
+    username = StringField('Username', validators=[DataRequired(), user_does_not_exist])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
 

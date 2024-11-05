@@ -33,7 +33,7 @@ class User(UserMixin, db.Model):
             'exp': datetime.utcnow() + timedelta(seconds=expiration)
         }
         return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
-    
+
 class Event(db.Model):
     __tablename__ = 'event'
 
