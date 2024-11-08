@@ -73,6 +73,11 @@ def register():
             flash('There was an issue creating your account.', 'danger')
     return render_template('register.html', form=form)
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+
 @app.route('/logout')
 @login_required
 def logout():

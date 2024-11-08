@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Privacy Agreement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        h1, h2, p {
+            color: #333;
+        }
+        .agreement-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9;
+        }
+        .agreement-container ul {
+            padding-left: 20px;
+        }
+        .checkbox-container {
+            margin-top: 20px;
+        }
+        .checkbox-container label {
+            font-weight: bold;
+        }
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .submit-btn:active {
+        background-color: grey; /* Button turns grey when pressed */
+        }
+    </style>
+</head>
+<body>
+
+<div class="agreement-container">
+    <h1>Privacy Agreement</h1>
+    <p>Welcome to <strong>Python Calendar App</strong>! Before creating an account, please review and accept our Privacy Agreement. This outlines how we collect, use, and protect your information.</p>
+
+    <h2>Privacy Policy Overview</h2>
+    <p><em>Last Updated: <b>11-08-2024</b></em></p>
+
+    <h3>1. Information We Collect</h3>
+    <ul>
+        <li>We collect your username, email address, and password to create your account securely.</li>
+        <li>We store details about events you create or attend, including dates, times, locations, and attendee information, to provide core platform functionality.</li>
+        <li>We may collect information about your activity on the platform to help us improve the user experience.</li>
+    </ul>
+
+    <h3>2. How We Use Your Data</h3>
+    <ul>
+        <li>We use your data to enable you to create, view, and manage events.</li>
+        <li>We display relevant event details to participants for coordination purposes.</li>
+        <li>We ensure platform security and enhance functionality by analyzing platform usage and feedback.</li>
+    </ul>
+
+    <h3>3. Data Sharing</h3>
+    <ul>
+        <li>Event details are shared with other participants to ensure that attendees have the necessary information.</li>
+        <li>We may use trusted third-party providers to support platform functionality, including secure data storage.</li>
+        <li>We may disclose your data if required to comply with legal obligations or legitimate government requests.</li>
+    </ul>
+
+    <h3>4. Your Rights</h3>
+    <ul>
+        <li>You have the right to access, update, or delete your account information at any time.</li>
+        <li>You may request deletion of your account and associated data if you no longer wish to use our services.</li>
+        <li>You may withdraw your consent to data processing by contacting us, though this may limit your ability to use certain platform features.</li>
+    </ul>
+
+    <p><strong>To create an account, you must agree to this Privacy Agreement. If you do not accept, you will not be able to use Python Calendar App.</strong></p>
+
+    <div class="checkbox-container">
+        <input type="checkbox" id="agree" name="agree" onclick="toggleButton()">
+        <label for="agree"> I have read and agree to the Privacy Agreement and Terms of Service.</label>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" >Create Account</button>
+</div>
+
+
+
+</body>
+</html>
