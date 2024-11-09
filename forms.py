@@ -18,7 +18,12 @@ def email_exists(form, field):
     email_address = field.data 
     if User.query.filter_by(email=email_address).first(): 
         raise ValidationError("This email is already registered.")
-    
+
+def email_exists_in_db(form, field):
+    """Utilizes the email checks from email_manager for validation in the email form field"""
+    email_address = field.data 
+    if not User.query.filter_by(email=email_address).first(): 
+        raise ValidationError("This email is already registered.")  
 def user_exists(form, field):
     """Does a simple query in the User model to check if the username already exists in the DB"""
     inputusername = field.data
@@ -61,6 +66,16 @@ class RegisterForm(FlaskForm):
     )
     
     submit = SubmitField('Register')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField(
+        'Email',
+        validators=[
+            DataRequired(),
+            Email(message="Email not valid"), email_exists_in_db #Makes sure they entered an email
+        ]
+    )
+    submit = SubmitField('Submit')
 
 
 class EventForm(FlaskForm):

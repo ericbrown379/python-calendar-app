@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from forms import LoginForm, RegisterForm, EventForm
+from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
@@ -121,6 +121,15 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        send_email_via_gmail_oauth2(email, "Reset password", "PLACEHOLDER")
+        #Redirect to create new password url
+    return render_template('forgot_password.html', form=form)
 
 @app.route('/week', methods=['GET'], endpoint='week_view')
 @login_required

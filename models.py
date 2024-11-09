@@ -3,7 +3,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 db = SQLAlchemy()
 
@@ -28,9 +28,10 @@ class User(UserMixin, db.Model):
 
     def generate_verification_token(self, expiration=3600):  # 1 hour expiration
         from app import app
+        current_utc_time = datetime.now(timezone.utc)
         payload = {
             'user_id': self.id,
-            'exp': datetime.utcnow() + timedelta(seconds=expiration)
+            'exp': current_utc_time + timedelta(hours=1)
         }
         return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
