@@ -32,9 +32,12 @@ class User(UserMixin, db.Model):
         payload = {
             'user_id': self.id,
             'exp': current_utc_time + timedelta(hours=1)
-        }
+        } 
         return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
+    def retrieve_user_by_id(self, user_id):
+        """Retrieve a user by their ID."""
+        return User.query.get(user_id)
 class Event(db.Model):
     __tablename__ = 'event'
 
