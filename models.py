@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
-import jwt
+import jwt #PYJWT ALL JWT ARE PYJWT NOT JWT
 from datetime import datetime, timedelta, timezone
 
 db = SQLAlchemy()
