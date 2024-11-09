@@ -77,7 +77,20 @@ class ForgotPasswordForm(FlaskForm):
     )
     submit = SubmitField('Submit')
 
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField(
+        'Password', 
+        validators=[
+            DataRequired(),
+            # Ensure at least one special character
+            Regexp(r'^(?=.*[!@#$%^&+=])', message="Password must contain at least one special character (!, @, #, etc.)"),
+            # Ensure no forbidden characters are used
+            check_forbidden_characters
+        ]
+    )
 
+    submit = Submit = SubmitField('Submit')
+    
 class EventForm(FlaskForm):
     name = StringField('Event Name', validators=[DataRequired()])
     date = DateField('Date', validators=[DataRequired()])
