@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm
+from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
@@ -114,7 +114,40 @@ def verify_token(token):
         return payload['user_id']
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None  # Return None if the token is invalid or expired
-    
+
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    form = ResetPasswordForm()
+    try:
+       
+        '''
+        if user:
+            if request.method == 'POST':
+                new_password = request.form['password']
+                
+                # Here you would update the user's password in the database
+                # For this example, we just simulate the change
+                hashed_password = generate_password_hash(new_password)
+                # Update user password (this is just a placeholder)
+                print(f"Password for {user['username']} updated to {hashed_password}")
+
+                flash('Your password has been updated successfully!', 'success')
+                return redirect(url_for('login'))
+            '''
+        
+        user = User.retrieve_user_by_id(verify_token(token))
+        if form.validate_on_submit() and user and request.method == 'POST':
+            user.set_password(request.form['password'])
+            flash('Your password has been updated succesfully, redirecting back to login page')
+            return redirect(url_for('login'))          
+        return render_template('reset_password.html', form=form, user=user)
+
+    except Exception as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('login'))
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -130,6 +163,8 @@ def forgot_password():
         send_email_via_gmail_oauth2(email, "Reset password", "PLACEHOLDER")
         #Redirect to create new password url
     return render_template('forgot_password.html', form=form)
+
+
 
 @app.route('/week', methods=['GET'], endpoint='week_view')
 @login_required
