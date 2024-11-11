@@ -103,7 +103,10 @@ def send_verification_email(email, username, token):
     print(body)  # Debug print to check email body
     send_email_via_gmail_oauth2(to_email, subject, body)
 
-def send_password_reset_email(email):
+def send_password_reset_email(email, username, token):
     #reset_password_link = url_for()
-    reset_password_link = None
-    body = f"Hi, if you requested to reset your email, please click the following link: {reset_password_link}"
+    reset_password_link = url_for('reset_password', token=token, _external = True)
+    subject = "Click the link below to reset your password"
+    body = f"Hi {username}, if you requested to reset your email, please click the following link: {reset_password_link}"
+    print(body)
+    send_email_via_gmail_oauth2(email, subject, body)

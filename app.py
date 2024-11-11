@@ -5,10 +5,10 @@ from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetP
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
-from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email
+from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email, send_password_reset_email
 import os
 from flask_migrate import Migrate 
-from models import User, Event, db
+from models import User, Event, db, retrieve_user_by_id, retrieve_user_by_email
 import jwt
 
 app = Flask(__name__)
@@ -119,34 +119,36 @@ def verify_token(token):
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
-    form = ResetPasswordForm()
     try:
-       
-        '''
-        if user:
-            if request.method == 'POST':
-                new_password = request.form['password']
-                
-                # Here you would update the user's password in the database
-                # For this example, we just simulate the change
-                hashed_password = generate_password_hash(new_password)
-                # Update user password (this is just a placeholder)
-                print(f"Password for {user['username']} updated to {hashed_password}")
+        form = ResetPasswordForm()
+        user_id = verify_token(token)  # Use consistent lowercase for user_id
 
-                flash('Your password has been updated successfully!', 'success')
-                return redirect(url_for('login'))
-            '''
-        
-        user = User.retrieve_user_by_id(verify_token(token))
-        if form.validate_on_submit() and user and request.method == 'POST':
-            user.set_password(request.form['password'])
-            flash('Your password has been updated succesfully, redirecting back to login page')
-            return redirect(url_for('login'))          
-        return render_template('reset_password.html', form=form, user=user)
+        # Check if token is valid and user exists
+        if user_id is None:
+            print("No user_id found")
+            flash("Invalid or expired token, please request a new password reset.", "danger")
+            return redirect(url_for('login'))
+
+        user = retrieve_user_by_id(user_id=user_id)
+        if user is None:
+            print("No user object")
+            flash("User not found, please request a new password reset.", "danger")
+            return redirect(url_for('login'))
+
+        if form.validate_on_submit():
+            print(f"Updating password for user {user.id}")
+            user.set_password(form.new_password.data)  # Ensure this saves the user object
+            db.session.commit()  # Commit the transaction to save changes
+            flash('Your password has been updated successfully. Redirecting to login page.', "success")
+            return redirect(url_for('login'))
 
     except Exception as e:
-        flash(str(e), 'danger')
-        return redirect(url_for('login'))
+        db.session.rollback()  # Rollback in case of error
+        print(f"Exception occurred: {e}")  # Log the exception
+        flash('An error occurred while resetting your password.', 'danger')
+    
+    return render_template('reset_password.html', form=form, token=token)
+
 
 @app.route('/logout')
 @login_required
@@ -160,7 +162,11 @@ def forgot_password():
     form = ForgotPasswordForm()
     if form.validate_on_submit():
         email = form.email.data
-        send_email_via_gmail_oauth2(email, "Reset password", "PLACEHOLDER")
+        user = retrieve_user_by_email(email)
+        #if(user):
+        token = user.generate_verification_token()
+        send_password_reset_email(user.email, user.username, token=token)
+        
         #Redirect to create new password url
     return render_template('forgot_password.html', form=form)
 
