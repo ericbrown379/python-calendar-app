@@ -47,3 +47,14 @@ class EventForm(FlaskForm):
     optional_attendees = SelectMultipleField('Optional Attendees (Usernames)', choices=[], coerce=int)
     description = TextAreaField('Description', validators=[Length(max=500)])
     submit = SubmitField('Submit')
+
+
+class FeedbackForm(FlaskForm):
+    content = TextAreaField(
+        'Your Feedback', 
+        validators=[
+            DataRequired(message="Feedback cannot be empty."),
+            Length(max=1000, message="Feedback must be under 1000 characters.")
+        ]
+    )
+    submit = SubmitField('Submit Feedback')
