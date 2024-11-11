@@ -35,9 +35,14 @@ class User(UserMixin, db.Model):
         } 
         return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
-    def retrieve_user_by_id(self, user_id):
-        """Retrieve a user by their ID."""
-        return User.query.get(user_id)
+def retrieve_user_by_id(user_id):
+    """Retrieve a user by their ID."""
+    return User.query.filter_by(id=user_id).first()
+
+def retrieve_user_by_email(email):
+    """Retrieve a user by their ID."""
+    return User.query.filter_by(email=email).first()
+
 class Event(db.Model):
     __tablename__ = 'event'
 
