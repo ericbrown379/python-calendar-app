@@ -22,8 +22,8 @@ def email_exists(form, field):
 def email_exists_in_db(form, field):
     """Utilizes the email checks from email_manager for validation in the email form field"""
     email_address = field.data 
-    if User.query.filter_by(email=email_address).first() == None: 
-        raise ValidationError("This email is already registered.")  
+    if User.query.filter_by(email=email_address).first() is None: 
+        raise ValidationError("This email doesn't exist")  
     
 def user_exists(form, field):
     """Does a simple query in the User model to check if the username already exists in the DB"""
