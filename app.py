@@ -2,8 +2,8 @@ from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from forms import LoginForm, RegisterForm, EventForm
-from models import User, Event, db
+from forms import LoginForm, RegisterForm, EventForm, FeedbackForm
+from models import User, Event, db, Feedback
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
@@ -76,6 +76,25 @@ def register():
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
+
+@app.route('/faq', methods=['GET', 'POST'])
+def faq():
+    form = FeedbackForm()  # Instantiate your form
+    if form.validate_on_submit():
+        try:
+            # Assuming `user_id` and `event_id` are optional or dynamically determined elsewhere in the application
+            feedback = Feedback(content=form.content.data)
+            db.session.add(feedback)
+            db.session.commit()
+            flash('Feedback Submitted!', 'success')
+            return redirect(url_for('faq'))  # Redirect to avoid form resubmission on refresh
+        except Exception as e:
+            db.session.rollback()
+            print(e)
+            flash('There was an error submitting your feedback.', 'danger')
+    
+    return render_template('faq.html', form=form)
+
 
 
 @app.route('/logout')

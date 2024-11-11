@@ -49,3 +49,11 @@ class Event(db.Model):
     optional_attendees = db.relationship('User', secondary=optional_attendees, backref='optional_events')
 
     user = db.relationship('User', backref=db.backref('created_events', lazy=True))
+
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+    
+    id = db.Column(db.Integer, primary_key=True) 
+    content = db.Column(db.Text, nullable=False)  # Store the feedback text
+
+
