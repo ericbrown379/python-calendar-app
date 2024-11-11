@@ -107,13 +107,7 @@ def verify_email(token):
 
     return redirect(url_for('login'))
 
-def verify_token(token):
-    try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        print("RETURN USER ID",payload['user_id'])
-        return payload['user_id']
-    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-        return None  # Return None if the token is invalid or expired
+
 
 
 
@@ -122,7 +116,6 @@ def reset_password(token):
     try:
         form = ResetPasswordForm()
         user_id = verify_token(token)  # Use consistent lowercase for user_id
-
         # Check if token is valid and user exists
         if user_id is None:
             print("No user_id found")
@@ -148,7 +141,6 @@ def reset_password(token):
         flash('An error occurred while resetting your password.', 'danger')
     
     return render_template('reset_password.html', form=form, token=token)
-
 
 @app.route('/logout')
 @login_required
@@ -263,7 +255,13 @@ def delete_event(event_id):
     flash('Event deleted!', 'success')
     return redirect(url_for('week_view'))
 
-
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        print("RETURN USER ID",payload['user_id'])
+        return payload['user_id']
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None  # Return None if the token is invalid or expired
 
 from flask.cli import with_appcontext
 import click
