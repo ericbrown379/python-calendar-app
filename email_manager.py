@@ -31,13 +31,11 @@ def get_gmail_credentials():
             token.write(creds.to_json())
     return creds
 
-
 def is_valid_email_format(email):
     """Checks if user's email is in the correct format such as having @ and .com"""
     # Regular expression for validating an Email
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
     return re.match(email_regex, email) is not None
-
 
 def domain_has_mx_records(domain):    
     try:
@@ -47,22 +45,17 @@ def domain_has_mx_records(domain):
     except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
         return False
 
-
 def check_email_exists(email_address): 
-    """A placeholder for now because it's not 100% accurate"""
+    """A placeholder for now because it's not 100% accurate SUpposed to check if the email exists outside this app"""
     if not is_valid_email_format(email_address):
         print("Invalid email format.")
         return False
-
     domain = email_address.split('@')[1]
-
     if not domain_has_mx_records(domain):
         print("Domain does not have MX records.")
         return False
-
     print("Email format is valid and the domain has MX records.")
     return True
-
 
 def send_email_via_gmail_oauth2(to_email, subject, body):
     """Sending an email to the user through the GMAIL API"""
@@ -72,12 +65,9 @@ def send_email_via_gmail_oauth2(to_email, subject, body):
     message['From'] = SENDER_EMAIL
     message['To'] = to_email
     message['Subject'] = subject
-
     # Attach both plain text and HTML versions
     message.attach(MIMEText(body, 'plain'))  # Use 'plain' or 'html' depending on your content
     message.attach(MIMEText(body, 'html'))   # Ensure body is valid HTML if using this
-
-    # Send the email without base64 encoding
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.ehlo()
@@ -88,7 +78,6 @@ def send_email_via_gmail_oauth2(to_email, subject, body):
     except Exception as e:
         print(f"Error sending email: {e}")
 
-
 def send_verification_email(email, username, token):
     """Creates a verification email"""
     if not token:
@@ -98,7 +87,28 @@ def send_verification_email(email, username, token):
     # Generate verification link with token
     verification_link = url_for('verify_email', token=token, _external=True)    
     to_email = email  # Corrected this line
-    subject = "Verify your account"
-    body = f"Hello {username}, please verify your email by clicking the following link: {verification_link}"
+    subject = "Verify your calendarhive account"
+    body = (
+    f"Hello {username},\n\n"
+    "Please verify your email by clicking the following link:\n\n"
+    f"{verification_link}\n\n"
+    "If you did not sign up for an account, please disregard this email.\n\n"
+    "Best regards,\n"
+    "The CalendarHive Team"
+)
     print(body)  # Debug print to check email body
     send_email_via_gmail_oauth2(to_email, subject, body)
+
+def send_password_reset_email(email, username, token):
+    """Sends a reset password email to the user"""
+    reset_password_link = url_for('reset_password', token=token, _external = True)
+    subject = "Click the link below to reset your password"
+    body = (
+    f"Hi {username},\n\n"
+    "If you requested to reset your password, please click the following link:\n\n"
+    f"{reset_password_link}\n\n"
+    "If you didn’t request a password reset, please disregard this email.\n\n"
+    "Best regards,\n"
+    "The CalendarHive Team"
+)
+    send_email_via_gmail_oauth2(email, subject, body)
