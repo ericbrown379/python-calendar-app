@@ -2,14 +2,13 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from forms import LoginForm, RegisterForm, EventForm
+from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
-from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email
+from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email, send_password_reset_email
 import os
-from flask_migrate import Migrate 
-from models import User, Event, db
+from models import User, Event, db, retrieve_user_by_id, retrieve_user_by_email
 import jwt
 
 app = Flask(__name__)
@@ -108,20 +107,62 @@ def verify_email(token):
 
     return redirect(url_for('login'))
 
-def verify_token(token):
+
+
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
     try:
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        print("RETURN USER ID",payload['user_id'])
-        return payload['user_id']
-    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-        return None  # Return None if the token is invalid or expired
+        form = ResetPasswordForm()
+        user_id = verify_token(token)  # Use consistent lowercase for user_id
+        # Check if token is valid and user exists
+        if user_id is None:
+            print("No user_id found")
+            flash("Invalid or expired token, please request a new password reset.", "danger")
+            return redirect(url_for('login'))
+
+        user = retrieve_user_by_id(user_id=user_id)
+        if user is None:
+            print("No user object")
+            flash("User not found, please request a new password reset.", "danger")
+            return redirect(url_for('login'))
+
+        if form.validate_on_submit():
+            print(f"Updating password for user {user.id}")
+            user.set_password(form.new_password.data)  # Ensure this saves the user object
+            db.session.commit()  # Commit the transaction to save changes
+            flash('Your password has been updated successfully. Redirecting to login page.', "success")
+            return redirect(url_for('login'))
+
+    except Exception as e:
+        db.session.rollback()  # Rollback in case of error
+        print(f"Exception occurred: {e}")  # Log the exception
+        flash('An error occurred while resetting your password.', 'danger')
     
+    return render_template('reset_password.html', form=form, token=token)
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        user = retrieve_user_by_email(email)
+        #if(user):
+        token = user.generate_verification_token()
+        send_password_reset_email(user.email, user.username, token=token)
+        
+        #Redirect to create new password url
+    return render_template('forgot_password.html', form=form)
+
+
 
 @app.route('/week', methods=['GET'], endpoint='week_view')
 @login_required
@@ -240,7 +281,13 @@ def delete_event(event_id):
     flash('Event deleted!', 'success')
     return redirect(url_for('week_view'))
 
-
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        print("RETURN USER ID",payload['user_id'])
+        return payload['user_id']
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None  # Return None if the token is invalid or expired
 
 from flask.cli import with_appcontext
 import click

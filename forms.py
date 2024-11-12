@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField, SelectField, SelectMultipleField, RadioField
-from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email
+from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email, EqualTo
 from email_manager import check_email_exists
 from models import User
 
@@ -21,6 +21,12 @@ def email_exists(form, field):
     email_address = field.data 
     if User.query.filter_by(email=email_address).first(): 
         raise ValidationError("This email is already registered.")
+
+def email_exists_in_db(form, field):
+    """Utilizes the email checks from email_manager for validation in the email form field"""
+    email_address = field.data 
+    if User.query.filter_by(email=email_address).first() is None: 
+        raise ValidationError("This email doesn't exist")  
     
 def user_exists(form, field):
     """Does a simple query in the User model to check if the username already exists in the DB"""
@@ -60,7 +66,32 @@ class RegisterForm(FlaskForm):
     
     submit = SubmitField('Register')
 
+class ForgotPasswordForm(FlaskForm):
+    email = StringField(
+        'Email',
+        validators=[
+            DataRequired(),
+            Email(message="Email not valid"), email_exists_in_db #Makes sure they entered an email
+        ]
+    )
+    submit = SubmitField('Submit')
 
+class ResetPasswordForm(FlaskForm):
+    new_password = PasswordField(
+        'Password', 
+        validators=[
+            DataRequired(),
+            # Ensure at least one special character
+            Regexp(r'^(?=.*[!@#$%^&+=])', message="Password must contain at least one special character (!, @, #, etc.)"),
+            # Ensure no forbidden characters are used
+            check_forbidden_characters
+        ]
+    )
+    confirm_password = PasswordField('Retype Password', validators=[DataRequired(), EqualTo('new_password', message="Passwords must match")])
+    submit = SubmitField('Reset Password')
+
+    submit = Submit = SubmitField('Submit')
+    
 class EventForm(FlaskForm):
     name = StringField('Event Name', validators=[DataRequired()])
     date = DateField('Date', validators=[DataRequired()])

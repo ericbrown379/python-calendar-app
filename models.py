@@ -2,8 +2,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
-import jwt
-from datetime import datetime, timedelta
+import jwt #PYJWT ALL JWT ARE PYJWT NOT JWT
+from datetime import datetime, timedelta, timezone
 
 db = SQLAlchemy()
 
@@ -39,13 +39,21 @@ class User(UserMixin, db.Model):
 
     def generate_verification_token(self, expiration=3600):  # 1 hour expiration
         from app import app
+        current_utc_time = datetime.now(timezone.utc)
         payload = {
             'user_id': self.id,
-            'exp': datetime.utcnow() + timedelta(seconds=expiration)
-        }
+            'exp': current_utc_time + timedelta(hours=1)
+        } 
         return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
 
+def retrieve_user_by_id(user_id):
+    """Retrieve a user by their ID."""
+    return User.query.filter_by(id=user_id).first()
+
+def retrieve_user_by_email(email):
+    """Retrieve a user by their ID."""
+    return User.query.filter_by(email=email).first()
 
 class Event(db.Model):
     __tablename__ = 'event'
