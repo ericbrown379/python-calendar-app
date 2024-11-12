@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_migrate import Migrate
 from forms import LoginForm, RegisterForm, EventForm
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
@@ -145,28 +146,54 @@ def week_view():
 
     return render_template('week_view.html', weekly_events=weekly_events)
 
+
 @app.route('/add_event', methods=['GET', 'POST'])
 @login_required
 def add_event():
     form = EventForm()
+    
+    # Populate attendee options
+    all_users = User.query.all()
+    form.required_attendees.choices = [(user.id, user.username) for user in all_users]
+    form.optional_attendees.choices = [(user.id, user.username) for user in all_users]
+
+    user_location = None
+    if form.location_option.data == 'current':
+        user_location = event_manager.get_coordinates(current_user.address)
+    elif form.location_option.data == 'address' and form.address.data:
+        user_location = event_manager.get_coordinates(form.address.data)
+
+    if user_location:
+        suggestions = event_manager.suggest_locations(user_location)
+        form.location.choices = [(name, name) for name, _ in suggestions]
+
+    if form.required_attendees.data:
+        attendee_coords = [event_manager.get_coordinates(User.query.get(att_id).address) for att_id in form.required_attendees.data if User.query.get(att_id).address]
+        if attendee_coords:
+            midpoint = event_manager.calculate_midpoint(attendee_coords)
+            suggestions = event_manager.suggest_locations(midpoint)
+            form.location.choices = [(name, name) for name, _ in suggestions] 
+#I COMMENTED THIS OUT, I DON'T KNOW WHAT TO DO HERE -- MUTAMMIM      
+'''
     if form.validate_on_submit():
-        # Store times in Eastern Time (no UTC conversion)
         start_time = form.start_time.data.strftime('%H:%M:%S')
         end_time = form.end_time.data.strftime('%H:%M:%S')
 
-        # Add the event for the current user
         event_manager.add_event(
             name=form.name.data,
             date=form.date.data,
             start_time=start_time,
             end_time=end_time,
+            location=form.location.data,
             description=form.description.data,
-            user_id=current_user.id
+            user_id=current_user.id,
+            required_attendees=form.required_attendees.data,
+            optional_attendees=form.optional_attendees.data
         )
         flash('Event added!', 'success')
         return redirect(url_for('week_view'))
     return render_template('add_event.html', form=form)
-
+'''
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_event(event_id):

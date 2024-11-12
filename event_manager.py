@@ -1,13 +1,50 @@
 
 from storage_manager import StorageManager
 from models import Event
+from dotenv import load_dotenv
+import os
+import requests
 
+load_dotenv()
+OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 class EventManager:
     """Manages business logic for event-related operations"""
 
     def __init__(self):
         """Initialize the EventManager with SQLAlchemy session."""
         self.storage_manager = StorageManager()
+
+
+
+    def get_coordinates(self, address):
+        """Get latitude and longitude from an address using OpenCage API."""
+        url = f"https://api.opencagedata.com/geocode/v1/json?q={address}&key={OPENCAGE_API_KEY}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            results = response.json().get('results')
+            if results:
+                latitude = results[0]['geometry']['lat']
+                longitude = results[0]['geometry']['lng']
+                return latitude, longitude
+        return None
+    
+    def suggest_locations(self, user_location, event_type=None, distance=2000):
+        """Suggest locations using Google Places API based on user location and event type"""
+        place_type = event_type if event_type else 'restaurant'
+        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={user_location[0]},{user_location[1]}&radius={distance}&type={place_type}&key={GOOGLE_PLACES_API_KEY}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            places = response.json().get('results', [])
+            return [(place["name"], place["vicinity"]) for place in places]
+        return []
+    
+    def calculate_midpoint(self, coordinates):
+        """Calculate midpoint for multiple coordinates."""
+        latitudes = [coord[0] for coord in coordinates]
+        longitudes = [coord[1] for coord in coordinates]
+        return sum(latitudes) / len(latitudes), sum(longitudes) / len(longitudes)
+
 
     def add_event(self, name, date, start_time, end_time, description, user_id):
         """Add a new event using SQLAlchemy."""
