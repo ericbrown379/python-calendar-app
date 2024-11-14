@@ -2,13 +2,13 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm
+from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
+from models import User, Event, db, Feedback,retrieve_user_by_id, retrieve_user_by_email
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
 from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email, send_password_reset_email
 import os
-from models import User, Event, db, retrieve_user_by_id, retrieve_user_by_email
 import jwt
 
 app = Flask(__name__)
@@ -141,6 +141,28 @@ def reset_password(token):
         flash('An error occurred while resetting your password.', 'danger')
     
     return render_template('reset_password.html', form=form, token=token)
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/faq', methods=['GET', 'POST'])
+def faq():
+    form = FeedbackForm()  # Instantiate your form
+    if form.validate_on_submit():
+        try:
+            # Assuming `user_id` and `event_id` are optional or dynamically determined elsewhere in the application
+            feedback = Feedback(content=form.content.data)
+            db.session.add(feedback)
+            db.session.commit()
+            flash('Feedback Submitted!', 'success')
+            return redirect(url_for('week_view'))  # Redirect to avoid form resubmission on refresh
+        except Exception as e:
+            print(e)
+            flash('There was an error submitting your feedback.', 'danger')
+    
+    return render_template('faq.html', form=form)
+
+
 
 @app.route('/logout')
 @login_required
