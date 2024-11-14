@@ -9,6 +9,7 @@
 <body>
     <div class="container">
         <h2 class="mt-5">Register</h2>
+        
         <form method="POST" action="{{ url_for('register') }}">
             {{ form.hidden_tag() }}
             <div class="mb-3">
@@ -45,6 +46,14 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+            </div>
+            
+            <!-- Privacy Policy Checkbox -->
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="privacy" name="privacy" required>
+                <label class="form-check-label" for="privacy">
+                    By checking this box, You indicate that you have read and agree to the <a href="{{ url_for('privacy') }}" target="_blank">Privacy Policy</a>.
+                </label>
             </div>
             
             <div class="mb-3">

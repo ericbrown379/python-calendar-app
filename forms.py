@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField, SelectField, SelectMultipleField, RadioField
-from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email, Email_Validator, EqualTo
+from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email, EqualTo
 from email_manager import check_email_exists
 from models import User
 
@@ -109,3 +109,14 @@ class EventForm(FlaskForm):
     optional_attendees = SelectMultipleField('Optional Attendees (Usernames)', choices=[], coerce=int)
     description = TextAreaField('Description', validators=[Length(max=500)])
     submit = SubmitField('Submit')
+
+
+class FeedbackForm(FlaskForm):
+    content = TextAreaField(
+        'Your Feedback', 
+        validators=[
+            DataRequired(message="Feedback cannot be empty."),
+            Length(max=1000, message="Feedback must be under 1000 characters.")
+        ]
+    )
+    submit = SubmitField('Submit Feedback')
