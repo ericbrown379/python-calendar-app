@@ -89,7 +89,6 @@ def faq():
             flash('Feedback Submitted!', 'success')
             return redirect(url_for('faq'))  # Redirect to avoid form resubmission on refresh
         except Exception as e:
-            db.session.rollback()
             print(e)
             flash('There was an error submitting your feedback.', 'danger')
     
