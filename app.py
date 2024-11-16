@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, current_app
+from flask import Flask, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
@@ -8,13 +8,17 @@ from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
 from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email, send_password_reset_email
+from dotenv import load_dotenv
 import os
 import jwt
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///calendar.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['GOOGLE_PLACES_API_KEY'] = os.getenv('GOOGLE_PLACES_API_KEY')
 
 db.init_app(app)
 migrate = Migrate(app, db)  # Set up Flask-Migrate here
@@ -31,6 +35,13 @@ event_manager = EventManager()
 # Print database information
 print("Database URI:", app.config['SQLALCHEMY_DATABASE_URI'])
 print("Absolute path to database:", os.path.abspath('calendar.db'))
+
+
+
+# Make API KEY availiable to all templates
+@app.context_processor
+def inject_google_api_key():
+    return dict(google_places_api_key=app.config['GOOGLE_PLACES_API_KEY'])
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -63,6 +74,17 @@ def login():
         else:
             flash('Invalid email or password.', 'danger')
     return render_template('login.html', form=form)
+
+@app.route('/api/suggestions')
+def get_suggestions():
+    lat = request.args.get('lat')
+    lng = request.args.get('lng')
+
+    if lat and lng:
+        suggestions = event_manager.suggest_locations((float(lat), float(lng)))
+        return jsonify({'suggestions': suggestions})
+    return jsonify({'suggestions': []})
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -236,8 +258,6 @@ def add_event():
             midpoint = event_manager.calculate_midpoint(attendee_coords)
             suggestions = event_manager.suggest_locations(midpoint)
             form.location.choices = [(name, name) for name, _ in suggestions] 
-#I COMMENTED THIS OUT, I DON'T KNOW WHAT TO DO HERE -- MUTAMMIM      
-'''
     if form.validate_on_submit():
         start_time = form.start_time.data.strftime('%H:%M:%S')
         end_time = form.end_time.data.strftime('%H:%M:%S')
@@ -255,8 +275,8 @@ def add_event():
         )
         flash('Event added!', 'success')
         return redirect(url_for('week_view'))
-    return render_template('add_event.html', form=form)
-'''
+    return render_template('add_event.html', form=form, google_places_key=app.config['GOOGLE_PLACES_API_KEY'])
+
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_event(event_id):
