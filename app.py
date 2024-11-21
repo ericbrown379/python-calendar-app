@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit
 from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
 from models import User, Event, db, Feedback,retrieve_user_by_id, retrieve_user_by_email
 from datetime import date, timedelta, datetime
@@ -27,10 +28,17 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 event_manager = EventManager()
 
-# Define timezone for Eastern Time (US/Michigan)
-#eastern = ZoneInfo("America/Detroit")
+@socketio.on('connect')
+def handle_connect():
+    print(" Client connected")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Client disconnected")
 
 # Print database information
 print("Database URI:", app.config['SQLALCHEMY_DATABASE_URI'])
@@ -58,6 +66,39 @@ def index():
         return redirect(url_for('week_view'))
     else:
         return redirect(url_for('login'))
+    
+# Example: WebSocket Listener for New Events
+@socketio.on('create_event')  # Event name
+def handle_create_event(data):
+    """
+    Handles real-time event creation via WebSocket.
+    Expects 'data' to contain event details like name, date, start_time, etc.
+    """
+    try:
+        # Add event using the event manager
+        event = event_manager.add_event(
+            name=data['name'],
+            date=data['date'],
+            start_time=data['start_time'],
+            end_time=data['end_time'],
+            location=data['location'],
+            description=data['description'],
+            user_id=current_user.id
+        )
+
+        # Broadcast the new event to all connected clients
+        emit('event_created', {
+            'id': event.id,
+            'name': event.name,
+            'date': event.date,
+            'start_time': event.start_time,
+            'end_time': event.end_time,
+            'location': event.location,
+            'description': event.description
+        }, broadcast=True)
+    except Exception as e:
+        print(f"Error creating event: {e}")
+        emit('error', {'message': 'Failed to create event.'})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -225,8 +266,8 @@ def week_view():
         events_for_day = event_manager.get_events_by_date(current_user.id, single_date)
         # Display time in AM/PM format for each event
         for event in events_for_day:
-            event.start_time = format_time_am_pm(datetime.strptime(event.start_time, '%H:%M:%S'))
-            event.end_time = format_time_am_pm(datetime.strptime(event.end_time, '%H:%M:%S'))
+            event.start_time = event.start_time  # AM/PM formatting handled in frontend
+            event.end_time = event.end_time
         weekly_events[single_date] = events_for_day
 
     return render_template('week_view.html', weekly_events=weekly_events)
@@ -352,5 +393,5 @@ def reset_db():
         click.echo("Database reset successfully.")
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    socketio.run(app, debug=True)
 

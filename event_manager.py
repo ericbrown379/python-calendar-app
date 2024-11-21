@@ -5,6 +5,8 @@ from models import Event
 from dotenv import load_dotenv
 import os
 import requests
+from flask_socketio import emit
+from app import socketio
 
 load_dotenv()
 OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
@@ -61,7 +63,7 @@ class EventManager:
             date=date,
             start_time=start_time,
             end_time=end_time,
-            location=location,  # Add location field
+            location=location,
             description=description,
             user_id=user_id
         )
@@ -71,8 +73,21 @@ class EventManager:
             event.required_attendees = required_attendees
         if optional_attendees:
             event.optional_attendees = optional_attendees
-            
+        
         self.storage_manager.insert_event(event)
+
+        ## Emit real-time updates to connected users
+        socketio.emit('update_calendar', {
+            'id': event.id,
+            'name': event.name,
+            'date': event.date,
+            "start_time": event.start_time,
+            'end_time':event.end_time,
+            'location': event.location,
+            'description': event.description
+        }, broadcast=True)
+            
+
         return event
 
     def edit_event(self, event_id, name=None, date=None, start_time=None, end_time=None, location=None, description=None):
@@ -93,6 +108,16 @@ class EventManager:
                 event.description = description
             
             self.storage_manager.update_event(event)
+
+            socketio.emit('update_calendar', {
+                'id' : event.id,
+                'name': event.name,
+                'date': event.date,
+                'start_time': event.start_time,
+                'end_time': event.end_time,
+                'location': event.location,
+                'description': event.description
+            }, broadcast=True)
             return event
         return None
 
