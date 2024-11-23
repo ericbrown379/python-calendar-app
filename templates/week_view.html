@@ -18,7 +18,28 @@
                 </ul>
             </div>
         </nav>
-        
+
+        <!-- Notification Toggle and Hours Dropdown Form -->
+        <form method="POST" action="{{ url_for('week_view') }}">
+            <div class="d-flex align-items-center mt-3">
+                <div class="form-check me-3">
+                    <input class="form-check-input" type="checkbox" id="notificationToggle" name="notifications_enabled" {% if user.notifications_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="notificationToggle">
+                        Enable Notifications
+                    </label>
+                </div>
+                <div class="form-group me-3">
+                    <label for="notificationHours" class="form-label">Notify X hours before:</label>
+                    <select class="form-select" id="notificationHours" name="notification_hours">
+                        {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if user.notification_hours == i %}selected{% endif %}>{{ i }} hours</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Preferences</button>
+            </div>
+        </form>
+
         <h2 class="mt-5">Weekly Calendar View</h2>
         
         <!-- Table layout for weekly calendar -->
@@ -37,7 +58,6 @@
                             {% if events %}
                                 {% for event in events %}
                                     <strong>{{ event.name }}</strong><br>
-                                    <!-- Ensure start_time and end_time are displayed in AM/PM format -->
                                     {{ event.start_time }} - {{ event.end_time }}<br>
                                     <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-sm btn-primary">Edit</a>
                                     <form action="{{ url_for('delete_event', event_id=event.id) }}" method="POST" style="display:inline;">

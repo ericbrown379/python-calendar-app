@@ -15,8 +15,12 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    token = db.Column(db.String(200), nullable=True)  # New column for the verification token
+    token = db.Column(db.String(200), nullable=True)  
     is_verified = db.Column(db.Boolean, default=False)
+
+    notifications_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    notification_hours = db.Column(db.Integer, default=1, nullable=False)  # Default to 1 hour if not set
+
 
     def set_password(self, password):
         """Hashes the password and stores it."""
