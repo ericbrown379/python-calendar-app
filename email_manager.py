@@ -112,3 +112,4 @@ def send_password_reset_email(email, username, token):
     "The CalendarHive Team"
 )
     send_email_via_gmail_oauth2(email, subject, body)
+

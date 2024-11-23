@@ -10,7 +10,7 @@ import os
 from flask_migrate import Migrate 
 from models import User, Event, db, retrieve_user_by_id, retrieve_user_by_email
 import jwt
-
+from apscheduler.schedulers.background import BackgroundScheduler
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///calendar.db'
@@ -22,6 +22,9 @@ migrate = Migrate(app, db)  # Set up Flask-Migrate here
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+scheduler = BackgroundScheduler()
+scheduler.start()
 
 event_manager = EventManager()
 
@@ -164,7 +167,9 @@ def forgot_password():
 
 
 
-@app.route('/week', methods=['GET'], endpoint='week_view')
+from flask_login import current_user
+
+@app.route('/week', methods=['GET', 'POST'], endpoint='week_view')
 @login_required
 def week_view():
     # Get the current date
@@ -185,7 +190,23 @@ def week_view():
             event.end_time = format_time_am_pm(datetime.strptime(event.end_time, '%H:%M:%S'))
         weekly_events[single_date] = events_for_day
 
-    return render_template('week_view.html', weekly_events=weekly_events)
+    # Handle POST request to save notification preferences
+    if request.method == 'POST':
+        # Get the user's notification preferences from the form
+        notifications_enabled = 'notifications_enabled' in request.form
+        notification_hours = int(request.form.get('notification_hours', 1))  # Default to 1 hour if not set
+        
+        # Update user preferences in the database
+        current_user.notifications_enabled = notifications_enabled
+        current_user.notification_hours = notification_hours
+        print(f"{User.username} enabled notifications?, {notifications_enabled}")
+        db.session.commit()
+
+    # Pass the user object to the template
+    return render_template('week_view.html', weekly_events=weekly_events, user=current_user)
+
+
+
 
 @app.route('/add_event', methods=['GET', 'POST'])
 @login_required
@@ -262,6 +283,31 @@ def verify_token(token):
         return payload['user_id']
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None  # Return None if the token is invalid or expired
+        
+def check_for_notifications():
+    # Get current time
+    now = datetime.now()
+    
+    # Query users who have enabled notifications
+    users = User.query.filter_by(notifications_enabled=True).all()
+    
+    for user in users:
+        events = Event.query.filter(Event.date >= now).all()  # Get events that are coming up
+        for event in events:
+            # Calculate time difference from now to event's start time
+            time_to_event = event.date - now
+            #if time_to_event <= timedelta(hours=user.notification_hours):
+            if True:
+                subject = f"Reminder: {event.name} in {event.start_time.strftime('%H:%M')}"
+                body = f"Hi,\n\nThis is a reminder that the event '{event.name}' will start at {event.start_time.strftime('%H:%M')}.\n\nBest regards,\nYour Calendar App"
+                send_email_via_gmail_oauth2(user.email, subject, body)
+         
+@app.before_request
+def start_scheduler():
+    print("Scheduler running!")
+    if not scheduler.running:
+        scheduler.start()
+
 
 from flask.cli import with_appcontext
 import click
@@ -274,7 +320,7 @@ def set_default_emails():
         user.email = 'default@example.com'  # Set a default email or handle accordingly
     db.session.commit()  # Commit changes to the database
     click.echo(f"Updated {len(null_email_users)} users with a default email.")
-
+    
 @app.cli.command("reset-db")
 def reset_db():
     """Reset the database by dropping all tables and recreating them."""
@@ -282,6 +328,12 @@ def reset_db():
         db.drop_all()  # Drop all tables
         db.create_all()  # Create all tables
         click.echo("Database reset successfully.")
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
