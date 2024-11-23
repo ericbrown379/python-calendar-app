@@ -1,20 +1,25 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, current_app
+from flask import Flask, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm
+from flask_migrate import Migrate
+from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
+from models import User, Event, db, Feedback,retrieve_user_by_id, retrieve_user_by_email
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
 from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_verification_email, send_password_reset_email
+from dotenv import load_dotenv
 import os
-from flask_migrate import Migrate 
-from models import User, Event, db, retrieve_user_by_id, retrieve_user_by_email
 import jwt
 from apscheduler.schedulers.background import BackgroundScheduler
+
+load_dotenv()
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///calendar.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['GOOGLE_PLACES_API_KEY'] = os.getenv('GOOGLE_PLACES_API_KEY')
 
 db.init_app(app)
 migrate = Migrate(app, db)  # Set up Flask-Migrate here
@@ -34,6 +39,11 @@ event_manager = EventManager()
 # Print database information
 print("Database URI:", app.config['SQLALCHEMY_DATABASE_URI'])
 print("Absolute path to database:", os.path.abspath('calendar.db'))
+
+# Make API KEY availiable to all templates
+@app.context_processor
+def inject_google_api_key():
+    return dict(google_places_api_key=app.config['GOOGLE_PLACES_API_KEY'])
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -67,6 +77,17 @@ def login():
             flash('Invalid email or password.', 'danger')
     return render_template('login.html', form=form)
 
+@app.route('/api/suggestions')
+def get_suggestions():
+    lat = request.args.get('lat')
+    lng = request.args.get('lng')
+
+    if lat and lng:
+        suggestions = event_manager.suggest_locations((float(lat), float(lng)))
+        return jsonify({'suggestions': suggestions})
+    return jsonify({'suggestions': []})
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
@@ -86,7 +107,7 @@ def register():
                 return redirect(url_for('login'))
             else:
                 print("Token generation failed")  # Log failure
-                flash('Error generating verification token', 'danger')
+                flash('There was an error generating your verification token.', 'danger')
         except Exception as e:
             db.session.rollback()  # Rollback in case of error
             print(f"Exception occurred: {e}")  # Log the exception
@@ -99,20 +120,14 @@ def verify_email(token):
     if user_id is None:
         flash('Verification link is invalid or has expired.', 'danger')
         return redirect(url_for('login'))
-
     user = User.query.get(user_id)
     if user:
         user.is_verified = True
         db.session.commit()
         flash('Email verified successfully!', 'success')
     else:
-        flash('User not found.', 'danger')
-
+        flash('User was not found, please try verifying again!.', 'danger')
     return redirect(url_for('login'))
-
-
-
-
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
@@ -124,26 +139,42 @@ def reset_password(token):
             print("No user_id found")
             flash("Invalid or expired token, please request a new password reset.", "danger")
             return redirect(url_for('login'))
-
         user = retrieve_user_by_id(user_id=user_id)
         if user is None:
             print("No user object")
             flash("User not found, please request a new password reset.", "danger")
             return redirect(url_for('login'))
-
         if form.validate_on_submit():
             print(f"Updating password for user {user.id}")
             user.set_password(form.new_password.data)  # Ensure this saves the user object
             db.session.commit()  # Commit the transaction to save changes
             flash('Your password has been updated successfully. Redirecting to login page.', "success")
             return redirect(url_for('login'))
-
     except Exception as e:
         db.session.rollback()  # Rollback in case of error
         print(f"Exception occurred: {e}")  # Log the exception
         flash('An error occurred while resetting your password.', 'danger')
-    
     return render_template('reset_password.html', form=form, token=token)
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/faq', methods=['GET', 'POST'])
+def faq():
+    form = FeedbackForm()  # Instantiate your form
+    if form.validate_on_submit():
+        try:
+            # Assuming `user_id` and `event_id` are optional or dynamically determined elsewhere in the application
+            feedback = Feedback(content=form.content.data)
+            db.session.add(feedback)
+            db.session.commit()
+            flash('We received your feedback, Thank You!', 'success')
+            return redirect(url_for('week_view'))  # Redirect to avoid form resubmission on refresh
+        except Exception as e:
+            print(e)
+            flash('There was an error submitting your feedback.', 'danger')
+    return render_template('faq.html', form=form)
 
 @app.route('/logout')
 @login_required
@@ -154,18 +185,19 @@ def logout():
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
-    form = ForgotPasswordForm()
-    if form.validate_on_submit():
-        email = form.email.data
-        user = retrieve_user_by_email(email)
-        #if(user):
-        token = user.generate_verification_token()
-        send_password_reset_email(user.email, user.username, token=token)
-        
-        #Redirect to create new password url
-    return render_template('forgot_password.html', form=form)
-
-
+    try:
+        form = ForgotPasswordForm()
+        if form.validate_on_submit():
+            email = form.email.data
+            user = retrieve_user_by_email(email)
+            token = user.generate_verification_token()
+            send_password_reset_email(user.email, user.username, token=token)
+            flash("Please check your email for a reset link.", "success")
+            #Redirect to create new password url
+        return render_template('forgot_password.html', form=form)
+    except Exception as e:
+        print(e)
+        flash("There was an error submitting your request, please try again!", "danger")
 
 from flask_login import current_user
 
@@ -174,13 +206,10 @@ from flask_login import current_user
 def week_view():
     # Get the current date
     today = date.today()
-    
     # Create a range of dates from today to the next 6 days
     weekly_dates = [today + timedelta(days=i) for i in range(7)]
-    
     # Dictionary to store events by date
     weekly_events = {}
-
     # Fetch events for each day in the 7-day range starting from today
     for single_date in weekly_dates:
         events_for_day = event_manager.get_events_by_date(current_user.id, single_date)
@@ -189,30 +218,24 @@ def week_view():
             event.start_time = format_time_am_pm(datetime.strptime(event.start_time, '%H:%M:%S'))
             event.end_time = format_time_am_pm(datetime.strptime(event.end_time, '%H:%M:%S'))
         weekly_events[single_date] = events_for_day
-
     # Handle POST request to save notification preferences
     if request.method == 'POST':
         # Get the user's notification preferences from the form
         notifications_enabled = 'notifications_enabled' in request.form
         notification_hours = int(request.form.get('notification_hours', 1))  # Default to 1 hour if not set
-        
         # Update user preferences in the database
         current_user.notifications_enabled = notifications_enabled
         current_user.notification_hours = notification_hours
         print(f"{User.username} enabled notifications?, {notifications_enabled}")
         db.session.commit()
-
     # Pass the user object to the template
     return render_template('week_view.html', weekly_events=weekly_events, user=current_user)
-
-
-
 
 @app.route('/add_event', methods=['GET', 'POST'])
 @login_required
 def add_event():
     form = EventForm()
-    
+
     # Populate attendee options
     all_users = User.query.all()
     form.required_attendees.choices = [(user.id, user.username) for user in all_users]
@@ -310,10 +333,8 @@ def verify_token(token):
 def check_for_notifications():
     # Get current time
     now = datetime.now()
-    
     # Query users who have enabled notifications
     users = User.query.filter_by(notifications_enabled=True).all()
-    
     for user in users:
         events = Event.query.filter(Event.date >= now).all()  # Get events that are coming up
         for event in events:
@@ -324,14 +345,14 @@ def check_for_notifications():
                 subject = f"Reminder: {event.name} in {event.start_time.strftime('%H:%M')}"
                 body = f"Hi,\n\nThis is a reminder that the event '{event.name}' will start at {event.start_time.strftime('%H:%M')}.\n\nBest regards,\nYour Calendar App"
                 send_email_via_gmail_oauth2(user.email, subject, body)
-         
 @app.before_request
 def start_scheduler():
     print("Scheduler running!")
     if not scheduler.running:
         scheduler.start()
 
-
+#FOR DEALING WITH DB ERRORS DURING DEVELOPMENT! CHEAP WORKAROUNDS AND SHOULDN'T BE USED WHEN APP IS DEPLOYED!
+#---------------------------------------------------------------------------------------------#
 from flask.cli import with_appcontext
 import click
 
@@ -351,12 +372,7 @@ def reset_db():
         db.drop_all()  # Drop all tables
         db.create_all()  # Create all tables
         click.echo("Database reset successfully.")
-
-
-
-
-
-
+#---------------------------------------------------------------------------------------------#
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
