@@ -3,7 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
-from models import User, Event, db, Feedback,retrieve_user_by_id, retrieve_user_by_email
+from models import User, Event, Feedback,retrieve_user_by_id, retrieve_user_by_email
+from extensions import db
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
@@ -11,6 +12,8 @@ from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_
 from dotenv import load_dotenv
 import os
 import jwt
+from suggestion_service import EventsuggestionService
+suggestion_service = EventsuggestionService()
 
 load_dotenv()
 
@@ -51,6 +54,37 @@ def load_user(user_id):
 def format_time_am_pm(time_obj):
     """Convert a time object to 12-hour AM/PM format."""
     return time_obj.strftime('%I:%M %p')
+
+@app.route('/api/suggestions/event', methods=['GET'])
+@login_required
+def get_event_suggestions():
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({'error': 'Date parameter is required '}, 400)
+    
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        suggestions = suggestion_service.get_suggestions(current_user.id, target_date)
+        return jsonify({
+            'suggestions': [{
+                'id': s.id,
+                'name': s.event_name,
+                'time': s.suggested_time,
+                'explanation': s.explanation,
+                'score': s.similarity_score
+            } for s in suggestions]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/api/suggestions/dismiss/<int:suggestion_id>', methods=['POST'])
+@login_required
+def dismiss_suggestion(suggestion_id):
+    feedback = request.json.get('feedback')
+    suggestion_service.dismiss_suggestion(suggestion_id, feedback)
+    return jsonify({'status': 'success'})
+
 
 @app.route('/')
 def index():
@@ -242,22 +276,6 @@ def add_event():
     form.required_attendees.choices = [(user.id, user.username) for user in all_users]
     form.optional_attendees.choices = [(user.id, user.username) for user in all_users]
 
-    user_location = None
-    if form.location_option.data == 'current':
-        user_location = event_manager.get_coordinates(current_user.address)
-    elif form.location_option.data == 'address' and form.address.data:
-        user_location = event_manager.get_coordinates(form.address.data)
-
-    if user_location:
-        suggestions = event_manager.suggest_locations(user_location)
-        form.location.choices = [(name, name) for name, _ in suggestions]
-
-    if form.required_attendees.data:
-        attendee_coords = [event_manager.get_coordinates(User.query.get(att_id).address) for att_id in form.required_attendees.data if User.query.get(att_id).address]
-        if attendee_coords:
-            midpoint = event_manager.calculate_midpoint(attendee_coords)
-            suggestions = event_manager.suggest_locations(midpoint)
-            form.location.choices = [(name, name) for name, _ in suggestions] 
     if form.validate_on_submit():
         start_time = form.start_time.data.strftime('%H:%M:%S')
         end_time = form.end_time.data.strftime('%H:%M:%S')
@@ -276,6 +294,7 @@ def add_event():
         flash('Event added!', 'success')
         return redirect(url_for('week_view'))
     return render_template('add_event.html', form=form, google_places_key=app.config['GOOGLE_PLACES_API_KEY'])
+
 
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
