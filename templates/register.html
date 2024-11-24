@@ -7,46 +7,62 @@
     <title>Register</title>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Register</h1>
-        <!-- Flash Messages Section -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        <!-- Registration Form -->
+    <div class="container">
+        <h2 class="mt-5">Register</h2>
+        
         <form method="POST" action="{{ url_for('register') }}">
             {{ form.hidden_tag() }}
             <div class="mb-3">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control") }}
+                    {% if form.email.errors %}
+                        <div class="text-danger">
+                            {% for error in form.email.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+            <div class="mb-3">
                 {{ form.username.label(class="form-label") }}
                 {{ form.username(class="form-control") }}
-                {% for error in form.username.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                {% endfor %}
+                {% if form.username.errors %}
+                    <div class="text-danger">
+                        {% for error in form.username.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
-            <div class="mb-3">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control") }}
-                {% for error in form.email.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                {% endfor %}
-            </div>
+            
             <div class="mb-3">
                 {{ form.password.label(class="form-label") }}
                 {{ form.password(class="form-control") }}
-                {% for error in form.password.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                {% endfor %}
+                {% if form.password.errors %}
+                    <div class="text-danger">
+                        {% for error in form.password.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
+            
+            <!-- Privacy Policy Checkbox -->
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="privacy" name="privacy" required>
+                <label class="form-check-label" for="privacy">
+                    By checking this box, You indicate that you have read and agree to the <a href="{{ url_for('privacy') }}" target="_blank">Privacy Policy</a>.
+                </label>
+            </div>
+            
             <div class="mb-3">
+                
                 {{ form.submit(class="btn btn-primary") }}
             </div>
         </form>
+        
+        <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
     </div>
 </body>
 </html>
