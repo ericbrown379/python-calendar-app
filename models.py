@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import jwt #PYJWT ALL JWT ARE PYJWT NOT JWT
 from datetime import datetime, timedelta, timezone
+from models import db
 
 db = SQLAlchemy()
 
@@ -78,8 +79,27 @@ class Event(db.Model):
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
-    
     id = db.Column(db.Integer, primary_key=True) 
     content = db.Column(db.Text, nullable=False)  # Store the feedback text
 
+class UserPreferences(db.Model):
+    __tablename__ = "user_preferences"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    preferred_days = db.Column(db.String(50))  # Stored as comma-separated values
+    preferred_times = db.Column(db.String(50))  # Stored as comma-separated values
+    location_preferences = db.Column(db.Text)   # Stored as JSON
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
+class EventSuggestion(db.Model):
+    __tablename__ = "event_suggestion"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_name = db.Column(db.String(150), nullable=False)
+    suggested_date = db.Column(db.Date, nullable=False)
+    suggested_time = db.Column(db.String(50), nullable=False)
+    explanation = db.Column(db.Text)
+    similarity_score = db.Column(db.Float)
+    is_dismissed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
