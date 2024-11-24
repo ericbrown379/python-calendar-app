@@ -19,17 +19,42 @@ def get_gmail_credentials():
     """Gets credentials from the GMAIL API for our app to send emails to users"""
     creds = None
     token_path = 'token.json'
+    
+    # Check if the token already exists
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-    if not creds or not creds.valid:#If no valid creds are available, prompt the user to log in
+    
+    # If no valid credentials are available, prompt the user to log in
+    if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            # Build the credentials from environment variables
+            client_id = os.getenv('GOOGLE_CLIENT_ID')
+            client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+            redirect_uri = os.getenv('GOOGLE_REDIRECT_URIS')
+            
+            # Construct the flow object using the environment variables
+            flow = InstalledAppFlow.from_client_config({
+                'installed': {
+                    'client_id': client_id,
+                    'client_secret': client_secret,
+                    'redirect_uris': redirect_uri,
+                    'auth_uri': os.getenv('GOOGLE_AUTH_URI'),
+                    'token_uri': os.getenv('GOOGLE_TOKEN_URI'),
+                    'auth_provider_x509_cert_url': os.getenv('GOOGLE_AUTH_PROVIDER_CERT_URL'),
+                    'project_id': os.getenv('GOOGLE_PROJECT_ID')
+                }
+            }, SCOPES)
+            
             creds = flow.run_local_server(port=8080)
+        
+        # Save the credentials to the token.json file for future use
         with open(token_path, 'w') as token:
             token.write(creds.to_json())
+    
     return creds
+
 
 def is_valid_email_format(email):
     """Checks if user's email is in the correct format such as having @ and .com"""
