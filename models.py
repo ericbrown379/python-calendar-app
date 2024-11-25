@@ -1,8 +1,10 @@
 from flask_login import UserMixin
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from extensions import db
 import jwt
 from datetime import datetime, timedelta, timezone
+
+db = SQLAlchemy()
 
 required_attendees = db.Table(
     'required_attendees',
@@ -26,6 +28,10 @@ class User(UserMixin, db.Model):
     is_verified = db.Column(db.Boolean, default=False)
     address = db.Column(db.String(255), nullable=True)
 
+    notifications_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    notification_hours = db.Column(db.Integer, default=1, nullable=False)  # Default to 1 hour if not set
+
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -46,9 +52,9 @@ class Event(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
-    date = db.Column(db.String(50), nullable=False)
-    start_time = db.Column(db.String(50), nullable=False)
-    end_time = db.Column(db.String(50), nullable=False)
+    date = db.Column(db.String(50), nullable=False)  # Stored as 'YYYY-MM-DD'
+    start_time = db.Column(db.String(50), nullable=False)  # Stored as 'HH:MM:SS'
+    end_time = db.Column(db.String(50), nullable=False)  # Stored as 'HH:MM:SS'
     description = db.Column(db.Text, nullable=True)
     location = db.Column(db.String(255), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -56,6 +62,25 @@ class Event(db.Model):
     required_attendees = db.relationship('User', secondary=required_attendees, backref='required_events')
     optional_attendees = db.relationship('User', secondary=optional_attendees, backref='optional_events')
     user = db.relationship('User', backref=db.backref('created_events', lazy=True))
+
+    # Add helper methods for date/time handling
+    def get_date_formatted(self):
+        """Return date as a datetime.date object"""
+        return datetime.strptime(self.date, '%Y-%m-%d').date()
+
+    def get_start_time_formatted(self):
+        """Return start time in AM/PM format"""
+        time_obj = datetime.strptime(self.start_time, '%H:%M:%S')
+        return time_obj.strftime('%I:%M %p')
+
+    def get_end_time_formatted(self):
+        """Return end time in AM/PM format"""
+        time_obj = datetime.strptime(self.end_time, '%H:%M:%S')
+        return time_obj.strftime('%I:%M %p')
+
+    def __repr__(self):
+        return f'<Event {self.name} on {self.date} at {self.start_time}>'
+    
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'

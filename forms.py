@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField, SelectField, SelectMultipleField, RadioField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField, BooleanField, SelectField, SelectMultipleField, RadioField
 from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email, EqualTo
 from email_manager import check_email_exists
 from models import User
@@ -104,13 +104,16 @@ class EventForm(FlaskForm):
         validators=[DataRequired()]
     )
     address = StringField('Address', validators=[Length(max=255)])  # Optional address
-    location = SelectField('Suggested Locations', choices=[], validators=[DataRequired()])
+    location = SelectField('Suggested Locations', choices=[], coerce=str, validators=[DataRequired()])
     required_attendees = SelectMultipleField('Required Attendees (Usernames)', choices=[], coerce=int)
     optional_attendees = SelectMultipleField('Optional Attendees (Usernames)', choices=[], coerce=int)
     description = TextAreaField('Description', validators=[Length(max=500)])
+    notification_hours = SelectField(
+        'Notification Hours Before Event',
+        choices=[(str(i), f'{i} hour(s)') for i in range(1, 13)],
+        coerce=str
+    )
     submit = SubmitField('Submit')
-
-
 class FeedbackForm(FlaskForm):
     content = TextAreaField(
         'Your Feedback', 
