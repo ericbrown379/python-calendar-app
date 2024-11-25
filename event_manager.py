@@ -1,7 +1,8 @@
 ## event_manager.py
+from datetime import datetime
 from flask import jsonify
 from storage_manager import StorageManager
-from models import Event
+from models import Event, User
 from dotenv import load_dotenv
 import os
 import requests
@@ -53,27 +54,54 @@ class EventManager:
         longitudes = [coord[1] for coord in coordinates]
         return sum(latitudes) / len(latitudes), sum(longitudes) / len(longitudes)
 
-
     def add_event(self, name, date, start_time, end_time, location, description, user_id, required_attendees=None, optional_attendees=None):
         """Add a new event using SQLAlchemy."""
-        event = Event(
-            name=name,
-            date=date,
-            start_time=start_time,
-            end_time=end_time,
-            location=location,  # Add location field
-            description=description,
-            user_id=user_id
-        )
-        
-        # Handle attendees if provided
-        if required_attendees:
-            event.required_attendees = required_attendees
-        if optional_attendees:
-            event.optional_attendees = optional_attendees
+        try:
+            print(f"\nAdding event through event manager:")
+            print(f"Name: {name}")
+            print(f"Date: {date}")
+            print(f"Start Time: {start_time}")
+            print(f"End Time: {end_time}")
+            print(f"Location: {location}")
+            print(f"User ID: {user_id}")
+
+            # Create new event
+            event = Event(
+                name=name,
+                date=date,
+                start_time=start_time,
+                end_time=end_time,
+                location=location,
+                description=description,
+                user_id=user_id
+            )
             
-        self.storage_manager.insert_event(event)
-        return event
+
+            # Handle attendees
+            if required_attendees:
+                required_users = User.query.filter(User.id.in_(required_attendees)).all()
+                event.required_attendees.extend(required_users)
+                
+            if optional_attendees:
+                optional_users = User.query.filter(User.id.in_(optional_attendees)).all()
+                event.optional_attendees.extend(optional_users)
+
+            # Use storage manager to save event
+            print("Saving event through storage manager")
+            self.storage_manager.insert_event(event)
+            
+            # Verify event was saved
+            saved_event = self.storage_manager.retrieve_event(event.id)
+            if saved_event:
+                print(f"Event verified in database: {saved_event.name} on {saved_event.date}")
+            else:
+                print("Failed to verify event in database")
+
+            return event
+
+        except Exception as e:
+            print(f"Error in event_manager.add_event: {str(e)}")
+            return None
 
     def edit_event(self, event_id, name=None, date=None, start_time=None, end_time=None, location=None, description=None):
         """Edit an existing event using SQLAlchemy."""
