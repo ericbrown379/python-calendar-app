@@ -12,6 +12,7 @@
 </head>
 <body>
     <div class="container my-5">
+    
         <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
             <a class="navbar-brand" href="{{ url_for('week_view') }}">Home</a>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -65,30 +66,50 @@
                             {{ form.end_time(class="form-control") }}
                         </div>
                     </div>
-                </div>
-                <!-- Location Options Tab -->
-                <div class="tab-pane fade" id="location" role="tabpanel" aria-labelledby="location-tab">
-                    <div class="location-section">
-                        <label for="locationType" class="form-label">Select Location Type</label>
-                        <select id="locationType" class="form-select">
-                            <option value="current">Use Current Location</option>
-                            <option value="address">Enter Address</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mt-3" id="addressInput" style="display: none;">
-                        {{ form.address.label(class="form-label") }}
-                        {{ form.address(class="form-control") }}
-                        <button type="button" class="btn btn-primary mt-2" onclick="fetchSuggestedLocations()">Find Nearby Locations</button>
-                    </div>
-                    
-                    <div class="mt-3" id="suggestedLocations" style="display: none;">
-                        <label for="locationSuggestions" class="form-label">Suggested Locations</label>
-                        <select id="locationSuggestions" class="form-select" onchange="updateSelectedLocation()">
-                            <!-- Options will be dynamically generated -->
+                    <div class="mb-3">
+                        <label for="notificationHours" class="form-label">Notify X hours before:</label>
+                        <select name="notification_hours" class="form-select" id="notificationHours">
+                            {% for value, label in form.notification_hours.choices %}
+                                <option value="{{ value }}" {% if value == form.notification_hours.data %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
+<!-- Location Options Tab -->
+<div class="tab-pane fade" id="location" role="tabpanel" aria-labelledby="location-tab">
+    <div class="location-section">
+        <label for="locationType" class="form-label">Select Location Type</label>
+        <select id="locationType" class="form-select">
+            <option value="current">Use Current Location</option>
+            <option value="address">Enter Address</option>
+        </select>
+    </div>
+
+    <!-- Google Places Autocomplete or Address Input -->
+    <div class="mt-3" id="addressInput" style="display: none;">
+        {{ form.address.label(class="form-label") }}
+        {{ form.address(class="form-control") }}
+        <button type="button" class="btn btn-primary mt-2" onclick="fetchSuggestedLocations()">Find Nearby Locations</button>
+    </div>
+
+    <!-- Dynamically Suggested Locations -->
+    <div class="mt-3" id="suggestedLocations" style="display: none;">
+        <label for="locationSuggestions" class="form-label">Suggested Locations</label>
+        <select id="locationSuggestions" class="form-select" onchange="updateSelectedLocation()">
+            <!-- Options will be dynamically generated -->
+        </select>
+    </div>
+
+    <!-- Selected Location Dropdown -->
+    <div class="mt-3">
+        <div class="mb-3">
+            {{ form.location.label(class="form-label") }}
+            {{ form.location(class="form-select") }}
+        </div>
+    </div>
+</div>
                 <!-- Attendees Tab -->
                 <div class="tab-pane fade" id="attendees" role="tabpanel" aria-labelledby="attendees-tab">
                     <div class="mb-3">
@@ -100,6 +121,11 @@
                         {{ form.optional_attendees(class="form-control") }}
                     </div>
                 </div>
+                <!-- Event Suggestions Tab -->
+                 <div class="suggestions-container mt-4" id="eventSuggestions">
+                    <h3>Recommended Events</h3>
+                    <div class="row" id="suggestionsList"></div>
+                 </div>
                 <!-- Description Tab -->
                 <div class="tab-pane fade" id="description" role="tabpanel" aria-labelledby="description-tab">
                     <div class="mb-3">
@@ -113,136 +139,213 @@
                 {{ form.submit(class="btn btn-success") }}
             </div>
         </form>
-        <!-- Google Places API and JavaScript -->
         <script src="https://maps.googleapis.com/maps/api/js?key={{ google_places_api_key }}&libraries=places"></script>
         <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const locationType = document.getElementById("locationType");
-    const addressInput = document.getElementById("addressInput");
-    const suggestedLocations = document.getElementById("suggestedLocations");
-    const addressField = document.querySelector('#addressInput input');
-    const eventForm = document.getElementById("eventForm");
-    let autocomplete;
-    // Function to update the hidden location field
-    window.updateSelectedLocation = function() {
-        const locationSelect = document.getElementById("locationSuggestions");
-        const selectedLocation = locationSelect.value;
-        document.getElementById("selectedLocation").value = selectedLocation;
-    };
-    // Initialize Places Autocomplete
-    function initializeAutocomplete() {
-        autocomplete = new google.maps.places.Autocomplete(addressField, {
-            types: ['establishment', 'geocode'],
-            componentRestrictions: { country: 'us' },
-            fields: ['address_components', 'geometry', 'name', 'formatted_address']
-        });
-        addressField.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-            }
-        });
-        autocomplete.addListener('place_changed', function() {
-            const place = autocomplete.getPlace();
-            if (!place.geometry) {
-                addressField.placeholder = 'Enter a place';
-                return;
-            }
-            fetchSuggestedLocations(
-                place.geometry.location.lat(),
-                place.geometry.location.lng()
-            );
-        });
-    }
-    locationType.addEventListener("change", function() {
-        addressInput.style.display = this.value === "address" ? "block" : "none";
-        suggestedLocations.style.display = "none";
-        
-        if (this.value === "current") {
-            getCurrentLocation();
-        } else if (this.value === "address") {
-            initializeAutocomplete();
-        }
-    });
-    function getCurrentLocation() {
-        if (navigator.geolocation) {
-            suggestedLocations.innerHTML = '<p>Loading nearby locations...</p>';
-            suggestedLocations.style.display = "block";
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    fetchSuggestedLocations(
-                        position.coords.latitude,
-                        position.coords.longitude
-                    );
-                },
-                (error) => {
-                    console.error("Geolocation error:", error);
-                    suggestedLocations.innerHTML = '<p>Unable to access your location. Please try entering an address.</p>';
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0
-                }
-            );
-        } else {
-            suggestedLocations.innerHTML = '<p>Geolocation is not supported by your browser</p>';
-            suggestedLocations.style.display = "block";
-        }
-    }
-    window.fetchSuggestedLocations = function(lat, lng) {
-        const url = `/api/suggestions?lat=${lat}&lng=${lng}`;
-        
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                populateLocationDropdown(data.suggestions);
-            })
-            .catch(error => {
-                console.error("Error fetching suggestions:", error);
-                suggestedLocations.innerHTML = '<p>Error loading suggested locations. Please try again.</p>';
-                suggestedLocations.style.display = "block";
-            });
-    };
-    function populateLocationDropdown(locations) {
-        const dropdown = document.getElementById("locationSuggestions");
-        dropdown.innerHTML = "";
-        
-        if (locations.length === 0) {
-            const option = document.createElement("option");
-            option.textContent = "No locations found nearby";
-            dropdown.appendChild(option);
-        } else {
-            locations.forEach((loc) => {
-                const option = document.createElement("option");
-                option.value = loc.name;
-                option.textContent = `${loc.name} (${loc.vicinity})`;
-                dropdown.appendChild(option);
-            });
-        }
-        
-        suggestedLocations.style.display = "block";
-        // Update the hidden location field with the first suggestion
-        if (locations.length > 0) {
-            document.getElementById("selectedLocation").value = locations[0].name;
-        }
-    }
-    // Form submission handler
-    eventForm.addEventListener('submit', function(e) {
-        const selectedLocation = document.getElementById("selectedLocation").value;
-        if (!selectedLocation) {
-            e.preventDefault();
-            alert("Please select a location for the event");
-        }
-    });
-    // Initialize if address input is visible
-    if (addressInput.style.display !== "none") {
-        initializeAutocomplete();
-    }
+    const locationType = document.getElementById("locationType");
+    const addressInput = document.getElementById("addressInput");
+    const suggestedLocations = document.getElementById("suggestedLocations");
+    const addressField = document.querySelector('#addressInput input');
+    const eventForm = document.getElementById("eventForm");
+    let autocomplete;
+
+    // Function to update the hidden location field
+    window.updateSelectedLocation = function() {
+        const locationSelect = document.getElementById("locationSuggestions");
+        const selectedLocation = locationSelect.value;
+        document.getElementById("selectedLocation").value = selectedLocation;
+    };
+
+    // Initialize Places Autocomplete
+    function initializeAutocomplete() {
+        autocomplete = new google.maps.places.Autocomplete(addressField, {
+            types: ['establishment', 'geocode'],
+            componentRestrictions: { country: 'us' },
+            fields: ['address_components', 'geometry', 'name', 'formatted_address']
+        });
+
+        addressField.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            if (!place.geometry) {
+                addressField.placeholder = 'Enter a place';
+                return;
+            }
+
+            fetchSuggestedLocations(
+                place.geometry.location.lat(),
+                place.geometry.location.lng()
+            );
+        });
+    }
+
+    locationType.addEventListener("change", function() {
+        addressInput.style.display = this.value === "address" ? "block" : "none";
+        suggestedLocations.style.display = "none";
+        
+        if (this.value === "current") {
+            getCurrentLocation();
+        } else if (this.value === "address") {
+            initializeAutocomplete();
+        }
+    });
+
+    function getCurrentLocation() {
+        if (navigator.geolocation) {
+            suggestedLocations.innerHTML = '<p>Loading nearby locations...</p>';
+            suggestedLocations.style.display = "block";
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    fetchSuggestedLocations(
+                        position.coords.latitude,
+                        position.coords.longitude
+                    );
+                },
+                (error) => {
+                    console.error("Geolocation error:", error);
+                    suggestedLocations.innerHTML = '<p>Unable to access your location. Please try entering an address.</p>';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        } else {
+            suggestedLocations.innerHTML = '<p>Geolocation is not supported by your browser</p>';
+            suggestedLocations.style.display = "block";
+        }
+    }
+
+    window.fetchSuggestedLocations = function(lat, lng) {
+        const url = `/api/suggestions?lat=${lat}&lng=${lng}`;
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                populateLocationDropdown(data.suggestions);
+            })
+            .catch(error => {
+                console.error("Error fetching suggestions:", error);
+                suggestedLocations.innerHTML = '<p>Error loading suggested locations. Please try again.</p>';
+                suggestedLocations.style.display = "block";
+            });
+    };
+
+    function populateLocationDropdown(locations) {
+    const dropdown = document.getElementById("locationSuggestions");
+    dropdown.innerHTML = "";
+
+    if (locations.length === 0) {
+        const option = document.createElement("option");
+        option.textContent = "No locations found nearby";
+        dropdown.appendChild(option);
+    } else {
+        locations.forEach((loc) => {
+            const option = document.createElement("option");
+            option.value = loc.name;  // Pass back the location name
+            option.textContent = `${loc.name} (${loc.vicinity})`;
+            dropdown.appendChild(option);
+        });
+    }
+    document.getElementById('selectedLocation').value = locations.length > 0 ? locations[0].name : "";
+}
+
+    // Form submission handler
+    eventForm.addEventListener('submit', function(e) {
+        const locationSelect = document.getElementById('locationSuggestions');
+        const selectedLocation = locationSelect.value;
+
+        if (!selectedLocation) {
+            e.preventDefault();
+            alert("Please select a valid location from the dropdown.");
+        } else {
+            document.getElementById('selectedLocation').value = selectedLocation;
+        }
+    });
+
+    // Initialize if address input is visible
+    if (addressInput.style.display !== "none") {
+        initializeAutocomplete();
+    }
+
+    function loadSuggestions(date) {
+    fetch(`/api/suggestions/event?date=${date}`)
+        .then(response => response.json())
+        .then(data => {
+            const suggestionsList = document.getElementById('suggestionsList');
+            suggestionsList.innerHTML = '';
+            
+            data.suggestions.forEach(suggestion => {
+                const card = document.createElement('div');
+                card.className = 'col-md-4 mb-3';
+                card.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${suggestion.name}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">Suggested time: ${suggestion.time}</small>
+                            </p>
+                            <p class="card-text">${suggestion.explanation}</p>
+                            <button class="btn btn-sm btn-primary" onclick="useSuggestion(${JSON.stringify(suggestion)})">
+                                Use This
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="dismissSuggestion(${suggestion.id})">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                `;
+                suggestionsList.appendChild(card);
+            });
+        })
+        .catch(error => console.error('Error loading suggestions:', error));
+}
+
+function useSuggestion(suggestion) {
+    // Populate form fields with suggestion data
+    document.getElementById('name').value = suggestion.name;
+    document.getElementById('start_time').value = suggestion.time;
+    // Add more field population as needed
+}
+
+function dismissSuggestion(suggestionId) {
+    fetch(`/api/suggestions/dismiss/${suggestionId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            feedback: 'dismissed'
+        })
+    })
+    .then(() => {
+        // Refresh suggestions
+        const dateField = document.getElementById('date');
+        if (dateField.value) {
+            loadSuggestions(dateField.value);
+        }
+    })
+    .catch(error => console.error('Error dismissing suggestion:', error));
+}
+
+// Add event listener to date field
+document.getElementById('date').addEventListener('change', (e) => {
+    if (e.target.value) {
+        loadSuggestions(e.target.value);
+    }
+});
 });
         </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

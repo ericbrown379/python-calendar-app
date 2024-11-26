@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
-from models import User, Event, db, Feedback,retrieve_user_by_id, retrieve_user_by_email
+from models import User, Event, Feedback,retrieve_user_by_id, retrieve_user_by_email, db
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
 from zoneinfo import ZoneInfo
@@ -11,6 +11,8 @@ from email_manager import check_email_exists, send_email_via_gmail_oauth2, send_
 from dotenv import load_dotenv
 import os
 import jwt
+from suggestion_service import EventsuggestionService
+suggestion_service = EventsuggestionService()
 from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
@@ -53,6 +55,37 @@ def load_user(user_id):
 def format_time_am_pm(time_obj):
     """Convert a time object to 12-hour AM/PM format."""
     return time_obj.strftime('%I:%M %p')
+
+@app.route('/api/suggestions/event', methods=['GET'])
+@login_required
+def get_event_suggestions():
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({'error': 'Date parameter is required '}, 400)
+    
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        suggestions = suggestion_service.get_suggestions(current_user.id, target_date)
+        return jsonify({
+            'suggestions': [{
+                'id': s.id,
+                'name': s.event_name,
+                'time': s.suggested_time,
+                'explanation': s.explanation,
+                'score': s.similarity_score
+            } for s in suggestions]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/api/suggestions/dismiss/<int:suggestion_id>', methods=['POST'])
+@login_required
+def dismiss_suggestion(suggestion_id):
+    feedback = request.json.get('feedback')
+    suggestion_service.dismiss_suggestion(suggestion_id, feedback)
+    return jsonify({'status': 'success'})
+
 
 @app.route('/')
 def index():
@@ -160,6 +193,34 @@ def reset_password(token):
 def privacy():
     return render_template('privacy.html')
 
+
+
+def verify_event_storage():
+    """Verify events are stored and retrieved correctly"""
+    try:
+        print("\nVerifying event storage:")
+        
+        # Get all events
+        all_events = Event.query.all()
+        print(f"Total events in database: {len(all_events)}")
+        
+        for event in all_events:
+            print(f"\nEvent ID: {event.id}")
+            print(f"Name: {event.name}")
+            print(f"Date: {event.date}")
+            print(f"Time: {event.start_time} - {event.end_time}")
+            print(f"User ID: {event.user_id}")
+            
+            # Verify we can retrieve it
+            retrieved = event_manager.storage_manager.retrieve_event(event.id)
+            if retrieved:
+                print("Successfully retrieved event")
+            else:
+                print("Failed to retrieve event")
+                
+    except Exception as e:
+        print(f"Error verifying events: {str(e)}")
+
 @app.route('/faq', methods=['GET', 'POST'])
 def faq():
     form = FeedbackForm()  # Instantiate your form
@@ -204,76 +265,148 @@ from flask_login import current_user
 @app.route('/week', methods=['GET', 'POST'], endpoint='week_view')
 @login_required
 def week_view():
-    # Get the current date
-    today = date.today()
-    # Create a range of dates from today to the next 6 days
-    weekly_dates = [today + timedelta(days=i) for i in range(7)]
-    # Dictionary to store events by date
-    weekly_events = {}
-    # Fetch events for each day in the 7-day range starting from today
-    for single_date in weekly_dates:
-        events_for_day = event_manager.get_events_by_date(current_user.id, single_date)
-        # Display time in AM/PM format for each event
-        for event in events_for_day:
-            event.start_time = format_time_am_pm(datetime.strptime(event.start_time, '%H:%M:%S'))
-            event.end_time = format_time_am_pm(datetime.strptime(event.end_time, '%H:%M:%S'))
-        weekly_events[single_date] = events_for_day
-    # Handle POST request to save notification preferences
-    if request.method == 'POST':
-        # Get the user's notification preferences from the form
-        notifications_enabled = 'notifications_enabled' in request.form
-        notification_hours = int(request.form.get('notification_hours', 1))  # Default to 1 hour if not set
-        # Update user preferences in the database
-        current_user.notifications_enabled = notifications_enabled
-        current_user.notification_hours = notification_hours
-        print(f"{User.username} enabled notifications?, {notifications_enabled}")
-        db.session.commit()
-    # Pass the user object to the template
-    return render_template('week_view.html', weekly_events=weekly_events, user=current_user)
+    try:
+        # Get the current date
+        today = date.today()
+        print(f"\nDisplaying week view starting from: {today}")
+        
+        # Create a range of dates from today to the next 6 days
+        weekly_dates = [today + timedelta(days=i) for i in range(7)]
+        
+        # Dictionary to store events by date
+        weekly_events = {}
+        
+        # Debug: Show all events for current user
+        all_events = Event.query.filter_by(user_id=current_user.id).all()
+        print(f"\nAll events for user {current_user.id}:")
+        for event in all_events:
+            print(f"Event: {event.name} on {event.date}")
+        
+        # Fetch events for each day
+        for single_date in weekly_dates:
+            date_str = single_date.strftime('%Y-%m-%d')
+            print(f"\nFetching events for {date_str}")
+            
+            # Get events for this date
+            events = Event.query.filter_by(
+                user_id=current_user.id,
+                date=date_str
+            ).all()
+            
+            print(f"Found {len(events)} events")
+            
+            # Format times for display
+            for event in events:
+                print(f"Processing event: {event.name}")
+                try:
+                    start_time = datetime.strptime(event.start_time, '%H:%M:%S')
+                    end_time = datetime.strptime(event.end_time, '%H:%M:%S')
+                    event.start_time = start_time.strftime('%I:%M %p')
+                    event.end_time = end_time.strftime('%I:%M %p')
+                    print(f"Formatted times: {event.start_time} - {event.end_time}")
+                except Exception as e:
+                    print(f"Error formatting time for event {event.id}: {str(e)}")
+            
+            weekly_events[single_date] = events
+        
+        print("\nReturning weekly events:", weekly_events)
+        return render_template('week_view.html', weekly_events=weekly_events, user=current_user)
+    except Exception as e:
+        print(f"Error in week_view: {str(e)}")
+        flash('Error loading calendar. Please try again.', 'danger')
+        return render_template('week_view.html', weekly_events={}, user=current_user)
+    
+
+@app.route('/debug/events')
+@login_required
+def debug_events():
+    """Debug endpoint to view all events in the database"""
+    try:
+        events = Event.query.filter_by(user_id=current_user.id).all()
+        events_data = [
+            {
+                'id': event.id,
+                'name': event.name,
+                'date': event.date,
+                'start_time': event.start_time,
+                'end_time': event.end_time,
+                'location': event.location
+            }
+            for event in events
+        ]
+        return jsonify({'events': events_data})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/debug/verify_event/<int:event_id>')
+@login_required
+def verify_event(event_id):
+    """Debug endpoint to verify a specific event"""
+    try:
+        event = Event.query.get(event_id)
+        if event:
+            return jsonify({
+                'id': event.id,
+                'name': event.name,
+                'date': event.date,
+                'start_time': event.start_time,
+                'end_time': event.end_time,
+                'location': event.location,
+                'user_id': event.user_id
+            })
+        return jsonify({'error': 'Event not found'})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/add_event', methods=['GET', 'POST'])
 @login_required
 def add_event():
-    form = EventForm()
+    try:
+        form = EventForm()
 
-    # Populate attendee options
-    all_users = User.query.all()
-    form.required_attendees.choices = [(user.id, user.username) for user in all_users]
-    form.optional_attendees.choices = [(user.id, user.username) for user in all_users]
+        # Populate attendees
+        all_users = User.query.all()
+        form.required_attendees.choices = [(user.id, user.username) for user in all_users]
+        form.optional_attendees.choices = [(user.id, user.username) for user in all_users]
 
-    user_location = None
-    if form.location_option.data == 'current':
-        user_location = event_manager.get_coordinates(current_user.address)
-    elif form.location_option.data == 'address' and form.address.data:
-        user_location = event_manager.get_coordinates(form.address.data)
+        # Handle form submission
+        if request.method == 'POST':
+            # Dynamically set the location choices from frontend
+            selected_location = request.form.get('location')
+            form.location.choices = [(selected_location, selected_location)]
 
-    if user_location:
-        suggestions = event_manager.suggest_locations(user_location)
-        form.location.choices = [(name, name) for name, _ in suggestions]
+            if form.validate_on_submit():
+                # Collect data
+                date_str = form.date.data.strftime('%Y-%m-%d')
+                start_time = form.start_time.data.strftime('%H:%M:%S')
+                end_time = form.end_time.data.strftime('%H:%M:%S')
+                location = form.location.data
 
-    if form.required_attendees.data:
-        attendee_coords = [event_manager.get_coordinates(User.query.get(att_id).address) for att_id in form.required_attendees.data if User.query.get(att_id).address]
-        if attendee_coords:
-            midpoint = event_manager.calculate_midpoint(attendee_coords)
-            suggestions = event_manager.suggest_locations(midpoint)
-            form.location.choices = [(name, name) for name, _ in suggestions] 
-    if form.validate_on_submit():
-        start_time = form.start_time.data.strftime('%H:%M:%S')
-        end_time = form.end_time.data.strftime('%H:%M:%S')
+                # Add event using event manager
+                event = event_manager.add_event(
+                    name=form.name.data,
+                    date=date_str,
+                    start_time=start_time,
+                    end_time=end_time,
+                    location=location,
+                    description=form.description.data,
+                    user_id=current_user.id,
+                    required_attendees=form.required_attendees.data,
+                    optional_attendees=form.optional_attendees.data
+                )
 
-        event_manager.add_event(
-            name=form.name.data,
-            date=form.date.data,
-            start_time=start_time,
-            end_time=end_time,
-            location=form.location.data,
-            description=form.description.data,
-            user_id=current_user.id,
-            required_attendees=form.required_attendees.data,
-            optional_attendees=form.optional_attendees.data
-        )
-        flash('Event added!', 'success')
-        return redirect(url_for('week_view'))
+                if event:
+                    flash('Event added successfully!', 'success')
+                    return redirect(url_for('week_view'))
+                else:
+                    flash('Error creating event. Please try again.', 'danger')
+            else:
+                flash('Form validation failed. Please check your input.', 'danger')
+
+    except Exception as e:
+        print(f"Error in add_event route: {str(e)}")
+        flash('An unexpected error occurred. Please try again.', 'danger')
+
     return render_template('add_event.html', form=form, google_places_key=app.config['GOOGLE_PLACES_API_KEY'])
 
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
