@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4CAF50" />
+      <stop offset="50%" stop-color="#8BC34A" />
+      <stop offset="100%" stop-color="#4CAF50" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="600" height="200" fill="url(#gradient)" />
+
+  <text x="50" y="120" font-family="Arial, sans-serif" font-size="80" fill="white" font-weight="bold">Calendar</text>
+  <text x="420" y="120" font-family="Arial, sans-serif" font-size="80" fill="white" font-weight="bold">Hive</text>
+
+  <path d="M150,50 L250,50 L250,150 L150,150 Z" fill="#ffffff" opacity="0.2" />
+  <path d="M350,50 L450,50 L450,150 L350,150 Z" fill="#ffffff" opacity="0.2" />
+  <path d="M200,100 L300,100 L300,150 L200,150 Z" fill="#ffffff" opacity="0.4" />
+</svg>
