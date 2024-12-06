@@ -100,20 +100,23 @@ class EventForm(FlaskForm):
     location_option = RadioField(
         'Location Option',
         choices=[('current', 'Use Current Location'), ('address', 'Enter Address')],
-        default='current',
-        validators=[DataRequired()]
+        default='current'
     )
-    address = StringField('Address', validators=[Length(max=255)])  # Optional address
-    location = SelectField('Suggested Locations', choices=[], coerce=str, validators=[DataRequired()])
+    address = StringField('Address', validators=[Length(max=255)])
+    # Remove the validators from location field
+    location = SelectField('Suggested Locations', choices=[], coerce=str)
     required_attendees = SelectMultipleField('Required Attendees (Usernames)', choices=[], coerce=int)
     optional_attendees = SelectMultipleField('Optional Attendees (Usernames)', choices=[], coerce=int)
     description = TextAreaField('Description', validators=[Length(max=500)])
+    # Make notification_hours optional
     notification_hours = SelectField(
         'Notification Hours Before Event',
         choices=[(str(i), f'{i} hour(s)') for i in range(1, 13)],
-        coerce=str
+        coerce=str,
+        validators=[]  # Remove validators to make it optional
     )
     submit = SubmitField('Submit')
+    
 class FeedbackForm(FlaskForm):
     content = TextAreaField(
         'Your Feedback', 
