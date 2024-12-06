@@ -1,48 +1,45 @@
 # test_db.py
 from app import app, db
 from models import User, Event
-from datetime import datetime, date
+from datetime import datetime, date, time
 
-def test_database():
+def create_test_event(user_id):
     with app.app_context():
         try:
-            print("Testing database operations...")
+            print(f"Creating test event for user: {user_id}")
             
-            # 1. Create a test user
-            test_user = User(
-                username='test_user',
-                email='test@example.com'
-            )
-            test_user.set_password('password123')
-            db.session.add(test_user)
-            db.session.commit()
-            print("Created test user")
-            
-            # 2. Create a test event
+            # Format date and times as strings according to the model's requirements
             test_event = Event(
                 name='Test Event',
-                date=date.today().strftime('%Y-%m-%d'),
-                start_time='09:00:00',
-                end_time='10:00:00',
+                date=date.today().strftime('%Y-%m-%d'),  # Format as 'YYYY-MM-DD'
+                start_time='09:00:00',  # Format as 'HH:MM:SS'
+                end_time='10:00:00',    # Format as 'HH:MM:SS'
                 description='Test Description',
-                user_id=test_user.id
+                location='Test Location',
+                user_id=1  # Changed to 2 for EricB's ID
             )
+            
             db.session.add(test_event)
             db.session.commit()
-            print("Created test event")
+            print(f"Successfully created test event: {test_event.name}")
             
-            # 3. Verify we can retrieve the event
-            retrieved_event = Event.query.filter_by(user_id=test_user.id).first()
+            # Verify the event was created
+            retrieved_event = Event.query.filter_by(user_id=2).order_by(Event.id.desc()).first()
             if retrieved_event:
-                print(f"Successfully retrieved event: {retrieved_event.name}")
+                print(f"Retrieved event details:")
+                print(f"Name: {retrieved_event.name}")
+                print(f"Date: {retrieved_event.date}")
+                print(f"Start Time: {retrieved_event.start_time}")
+                print(f"End Time: {retrieved_event.end_time}")
+                print(f"Location: {retrieved_event.location}")
+                print(f"User ID: {retrieved_event.user_id}")
             else:
                 print("Failed to retrieve event")
             
-            print("\nTest completed successfully!")
-            
         except Exception as e:
-            print(f"Error during test: {str(e)}")
+            print(f"Error creating test event: {str(e)}")
             db.session.rollback()
+            raise
 
 if __name__ == "__main__":
-    test_database()
+    create_test_event(1)  # Directly create event for user ID 2 (EricB)

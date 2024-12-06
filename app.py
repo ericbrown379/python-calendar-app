@@ -369,20 +369,40 @@ def add_event():
         form.required_attendees.choices = [(user.id, user.username) for user in all_users]
         form.optional_attendees.choices = [(user.id, user.username) for user in all_users]
 
-        # Handle form submission
         if request.method == 'POST':
-            # Dynamically set the location choices from frontend
-            selected_location = request.form.get('location')
-            form.location.choices = [(selected_location, selected_location)]
+            print("Form data received:", request.form)  # Debug print
+            
+            # Get the location from the form data
+            location = request.form.get('location')
+            print(f"Location from form: {location}")  # Debug print
+
+            # Set the location in the form
+            form.location.choices = [(location, location)] if location else [('', 'No location')]
+            form.location.data = location
+
+            # Set a default notification hours if none provided
+            if not form.notification_hours.data:
+                form.notification_hours.data = '1'
 
             if form.validate_on_submit():
-                # Collect data
+                print("Form validated successfully")  # Debug print
+                
+                # Format the date and times
                 date_str = form.date.data.strftime('%Y-%m-%d')
                 start_time = form.start_time.data.strftime('%H:%M:%S')
                 end_time = form.end_time.data.strftime('%H:%M:%S')
-                location = form.location.data
 
-                # Add event using event manager
+                print(f"""
+                Creating event with:
+                Name: {form.name.data}
+                Date: {date_str}
+                Start: {start_time}
+                End: {end_time}
+                Location: {location}
+                User ID: {current_user.id}
+                """)  # Debug print
+
+                # Create the event
                 event = event_manager.add_event(
                     name=form.name.data,
                     date=date_str,
@@ -396,18 +416,22 @@ def add_event():
                 )
 
                 if event:
+                    print(f"Event created successfully: {event.id}")  # Debug print
+                    db.session.commit()  # Ensure changes are committed
                     flash('Event added successfully!', 'success')
                     return redirect(url_for('week_view'))
                 else:
+                    print("Event creation failed")  # Debug print
                     flash('Error creating event. Please try again.', 'danger')
             else:
+                print("Form validation errors:", form.errors)  # Debug print
                 flash('Form validation failed. Please check your input.', 'danger')
 
     except Exception as e:
         print(f"Error in add_event route: {str(e)}")
         flash('An unexpected error occurred. Please try again.', 'danger')
 
-    return render_template('add_event.html', form=form, google_places_key=app.config['GOOGLE_PLACES_API_KEY'])
+    return render_template('add_event.html', form=form)
 
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required

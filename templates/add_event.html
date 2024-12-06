@@ -1,146 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <title>Add Event</title>
-    <style>
-        .tab-content { margin-top: 20px; }
-        .location-section { margin-top: 15px; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Add Event</title>
+    <style>
+        .tab-content { margin-top: 20px; }
+        .location-section { margin-top: 15px; }
+    </style>
 </head>
 <body>
-    <div class="container my-5">
-    
-        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-            <a class="navbar-brand" href="{{ url_for('week_view') }}">Home</a>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-danger" href="{{ url_for('logout') }}">Logout</a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-        
-        <h2 class="mb-4">Add New Event</h2>
-        <form method="POST" action="{{ url_for('add_event') }}" id="eventForm">
-            {{ form.hidden_tag() }}
-            <!-- Add a hidden input for the location -->
-            <input type="hidden" name="location" id="selectedLocation">
-            <!-- Tab Navigation -->
-            <ul class="nav nav-pills mb-4" id="eventFormTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link active" id="details-tab" data-bs-toggle="tab" href="#details" role="tab" aria-controls="details" aria-selected="true">Event Details</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link" id="location-tab" data-bs-toggle="tab" href="#location" role="tab" aria-controls="location" aria-selected="false">Location Options</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link" id="attendees-tab" data-bs-toggle="tab" href="#attendees" role="tab" aria-controls="attendees" aria-selected="false">Attendees</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link" id="description-tab" data-bs-toggle="tab" href="#description" role="tab" aria-controls="description" aria-selected="false">Description</a>
-                </li>
-            </ul>
-            <!-- Rest of the form fields -->
-            <div class="tab-content" id="eventFormTabsContent">
-                <!-- Event Details Tab -->
-                <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
-                    <div class="mb-3">
-                        {{ form.name.label(class="form-label") }}
-                        {{ form.name(class="form-control") }}
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ form.date.label(class="form-label") }}
-                            {{ form.date(class="form-control") }}
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            {{ form.start_time.label(class="form-label") }}
-                            {{ form.start_time(class="form-control") }}
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            {{ form.end_time.label(class="form-label") }}
-                            {{ form.end_time(class="form-control") }}
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="notificationHours" class="form-label">Notify X hours before:</label>
-                        <select name="notification_hours" class="form-select" id="notificationHours">
-                            {% for value, label in form.notification_hours.choices %}
-                                <option value="{{ value }}" {% if value == form.notification_hours.data %}selected{% endif %}>
-                                    {{ label }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-<!-- Location Options Tab -->
-<div class="tab-pane fade" id="location" role="tabpanel" aria-labelledby="location-tab">
-    <div class="location-section">
-        <label for="locationType" class="form-label">Select Location Type</label>
-        <select id="locationType" class="form-select">
-            <option value="current">Use Current Location</option>
-            <option value="address">Enter Address</option>
-        </select>
-    </div>
-
-    <!-- Google Places Autocomplete or Address Input -->
-    <div class="mt-3" id="addressInput" style="display: none;">
-        {{ form.address.label(class="form-label") }}
-        {{ form.address(class="form-control") }}
-        <button type="button" class="btn btn-primary mt-2" onclick="fetchSuggestedLocations()">Find Nearby Locations</button>
-    </div>
-
-    <!-- Dynamically Suggested Locations -->
-    <div class="mt-3" id="suggestedLocations" style="display: none;">
-        <label for="locationSuggestions" class="form-label">Suggested Locations</label>
-        <select id="locationSuggestions" class="form-select" onchange="updateSelectedLocation()">
-            <!-- Options will be dynamically generated -->
-        </select>
-    </div>
-
-    <!-- Selected Location Dropdown -->
-    <div class="mt-3">
-        <div class="mb-3">
-            {{ form.location.label(class="form-label") }}
-            {{ form.location(class="form-select") }}
-        </div>
-    </div>
-</div>
-                <!-- Attendees Tab -->
-                <div class="tab-pane fade" id="attendees" role="tabpanel" aria-labelledby="attendees-tab">
-                    <div class="mb-3">
-                        {{ form.required_attendees.label(class="form-label") }}
-                        {{ form.required_attendees(class="form-control") }}
-                    </div>
-                    <div class="mb-3">
-                        {{ form.optional_attendees.label(class="form-label") }}
-                        {{ form.optional_attendees(class="form-control") }}
-                    </div>
-                </div>
+    <div class="container my-5">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+            <a class="navbar-brand" href="{{ url_for('week_view') }}">Home</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-danger" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        
+        <h2 class="mb-4">Add New Event</h2>
+        <form method="POST" action="{{ url_for('add_event') }}" id="eventForm">
+            {{ form.hidden_tag() }}
+            <!-- Add a hidden input for the location -->
+            <input type="hidden" name="location" id="selectedLocation">
+            <!-- Tab Navigation -->
+            <ul class="nav nav-pills mb-4" id="eventFormTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" id="details-tab" data-bs-toggle="tab" href="#details" role="tab" aria-controls="details" aria-selected="true">Event Details</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="location-tab" data-bs-toggle="tab" href="#location" role="tab" aria-controls="location" aria-selected="false">Location Options</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="attendees-tab" data-bs-toggle="tab" href="#attendees" role="tab" aria-controls="attendees" aria-selected="false">Attendees</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="description-tab" data-bs-toggle="tab" href="#description" role="tab" aria-controls="description" aria-selected="false">Description</a>
+                </li>
+            </ul>
+            <!-- Rest of the form fields -->
+            <div class="tab-content" id="eventFormTabsContent">
+                <!-- Event Details Tab -->
+                <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control") }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.date.label(class="form-label") }}
+                            {{ form.date(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.start_time.label(class="form-label") }}
+                            {{ form.start_time(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.end_time.label(class="form-label") }}
+                            {{ form.end_time(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+                <!-- Location Options Tab -->
+                <div class="tab-pane fade" id="location" role="tabpanel" aria-labelledby="location-tab">
+                    <div class="location-section">
+                        <label for="locationType" class="form-label">Select Location Type</label>
+                        <select id="locationType" class="form-select">
+                            <option value="current">Use Current Location</option>
+                            <option value="address">Enter Address</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mt-3" id="addressInput" style="display: none;">
+                        {{ form.address.label(class="form-label") }}
+                        {{ form.address(class="form-control") }}
+                        <button type="button" class="btn btn-primary mt-2" onclick="fetchSuggestedLocations()">Find Nearby Locations</button>
+                    </div>
+                    
+                    <div class="mt-3" id="suggestedLocations" style="display: none;">
+                        <label for="locationSuggestions" class="form-label">Suggested Locations</label>
+                        <select id="locationSuggestions" class="form-select" onchange="updateSelectedLocation()">
+                            <!-- Options will be dynamically generated -->
+                        </select>
+                    </div>
+                </div>
+                <!-- Attendees Tab -->
+                <div class="tab-pane fade" id="attendees" role="tabpanel" aria-labelledby="attendees-tab">
+                    <div class="mb-3">
+                        {{ form.required_attendees.label(class="form-label") }}
+                        {{ form.required_attendees(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.optional_attendees.label(class="form-label") }}
+                        {{ form.optional_attendees(class="form-control") }}
+                    </div>
+                </div>
                 <!-- Event Suggestions Tab -->
                  <div class="suggestions-container mt-4" id="eventSuggestions">
                     <h3>Recommended Events</h3>
                     <div class="row" id="suggestionsList"></div>
                  </div>
-                <!-- Description Tab -->
-                <div class="tab-pane fade" id="description" role="tabpanel" aria-labelledby="description-tab">
-                    <div class="mb-3">
-                        {{ form.description.label(class="form-label") }}
-                        {{ form.description(class="form-control") }}
-                    </div>
-                </div>
-            </div>
-            <!-- Submit Button -->
-            <div class="text-center mt-4">
-                {{ form.submit(class="btn btn-success") }}
-            </div>
-        </form>
-        <script src="https://maps.googleapis.com/maps/api/js?key={{ google_places_api_key }}&libraries=places"></script>
-        <script>
+
+                <!-- Description Tab -->
+                <div class="tab-pane fade" id="description" role="tabpanel" aria-labelledby="description-tab">
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control") }}
+                    </div>
+                </div>
+            </div>
+            <!-- Submit Button -->
+            <div class="text-center mt-4">
+                {{ form.submit(class="btn btn-success") }}
+            </div>
+        </form>
+        <!-- Google Places API and JavaScript -->
+        <script src="https://maps.googleapis.com/maps/api/js?key={{ google_places_api_key }}&libraries=places"></script>
+        <script>
 document.addEventListener("DOMContentLoaded", function() {
     const locationType = document.getElementById("locationType");
     const addressInput = document.getElementById("addressInput");
@@ -153,7 +134,11 @@ document.addEventListener("DOMContentLoaded", function() {
     window.updateSelectedLocation = function() {
         const locationSelect = document.getElementById("locationSuggestions");
         const selectedLocation = locationSelect.value;
-        document.getElementById("selectedLocation").value = selectedLocation;
+        
+        // Update both the hidden input and the form's location field
+        document.querySelector('input[name="location"]').value = selectedLocation;
+        
+        console.log("Selected location updated to:", selectedLocation); // Debug log
     };
 
     // Initialize Places Autocomplete
@@ -244,34 +229,38 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     function populateLocationDropdown(locations) {
-    const dropdown = document.getElementById("locationSuggestions");
-    dropdown.innerHTML = "";
-
-    if (locations.length === 0) {
-        const option = document.createElement("option");
-        option.textContent = "No locations found nearby";
-        dropdown.appendChild(option);
-    } else {
-        locations.forEach((loc) => {
+        const dropdown = document.getElementById("locationSuggestions");
+        dropdown.innerHTML = "";
+        
+        if (locations.length === 0) {
             const option = document.createElement("option");
-            option.value = loc.name;  // Pass back the location name
-            option.textContent = `${loc.name} (${loc.vicinity})`;
+            option.textContent = "No locations found nearby";
             dropdown.appendChild(option);
-        });
+        } else {
+            locations.forEach((loc) => {
+                const option = document.createElement("option");
+                option.value = loc.name;
+                option.textContent = `${loc.name} (${loc.vicinity})`;
+                dropdown.appendChild(option);
+            });
+        }
+        
+        suggestedLocations.style.display = "block";
+        // Update the hidden location field with the first suggestion
+        if (locations.length > 0) {
+            document.getElementById("selectedLocation").value = locations[0].name;
+        }
     }
-    document.getElementById('selectedLocation').value = locations.length > 0 ? locations[0].name : "";
-}
 
     // Form submission handler
     eventForm.addEventListener('submit', function(e) {
-        const locationSelect = document.getElementById('locationSuggestions');
-        const selectedLocation = locationSelect.value;
-
+        const selectedLocation = document.getElementById("selectedLocation").value;
+        console.log("Form submission - Selected location:", selectedLocation); // Debug log
+        
         if (!selectedLocation) {
             e.preventDefault();
-            alert("Please select a valid location from the dropdown.");
-        } else {
-            document.getElementById('selectedLocation').value = selectedLocation;
+            alert("Please select a location for the event");
+            return false;
         }
     });
 
@@ -347,8 +336,8 @@ document.getElementById('date').addEventListener('change', (e) => {
     }
 });
 });
-        </script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    </div>
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    </div>
 </body>
 </html>
