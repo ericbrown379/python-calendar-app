@@ -105,24 +105,28 @@ class EventManager:
 
     def edit_event(self, event_id, name=None, date=None, start_time=None, end_time=None, location=None, description=None):
         """Edit an existing event using SQLAlchemy."""
-        event = self.storage_manager.retrieve_event(event_id)
-        if event:
-            if name is not None:
-                event.name = name
-            if date is not None:
-                event.date = date
-            if start_time is not None:
-                event.start_time = start_time
-            if end_time is not None:
-                event.end_time = end_time
-            if location is not None:
-                event.location = location
-            if description is not None:
-                event.description = description
-            
-            self.storage_manager.update_event(event)
-            return event
-        return None
+        try:
+            event = self.storage_manager.retrieve_event(event_id)
+            if event:
+                if name is not None:
+                    event.name = name
+                if date is not None:
+                    event.date = date  # This should now be a string in 'YYYY-MM-DD' format
+                if start_time is not None:
+                    event.start_time = start_time  # This should now be a string in 'HH:MM:SS' format
+                if end_time is not None:
+                    event.end_time = end_time  # This should now be a string in 'HH:MM:SS' format
+                if location is not None:
+                    event.location = location
+                if description is not None:
+                    event.description = description
+                
+                self.storage_manager.update_event(event)
+                return event
+            return None
+        except Exception as e:
+            print(f"Error in edit_event: {str(e)}")
+            return None
 
     def delete_event(self, event_id):
         """Delete an event using SQLAlchemy."""

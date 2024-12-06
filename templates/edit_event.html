@@ -19,8 +19,17 @@
             </div>
         </nav>
         
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
         <h2 class="mt-5">Edit Event</h2>
-        <form method="POST" action="{{ url_for('edit_event', event_id=event.id) }}">
+        <form method="POST" id="eventForm">
             {{ form.hidden_tag() }}
             <div class="mb-3">
                 {{ form.name.label(class="form-label") }}
@@ -28,24 +37,95 @@
             </div>
             <div class="mb-3">
                 {{ form.date.label(class="form-label") }}
-                {{ form.date(class="form-control") }}
+                {{ form.date(class="form-control", type="date") }}
             </div>
             <div class="mb-3">
                 {{ form.start_time.label(class="form-label") }}
-                {{ form.start_time(class="form-control") }}
+                {{ form.start_time(class="form-control", type="time") }}
             </div>
             <div class="mb-3">
                 {{ form.end_time.label(class="form-label") }}
-                {{ form.end_time(class="form-control") }}
+                {{ form.end_time(class="form-control", type="time") }}
+            </div>
+            
+            <!-- Location Section -->
+            <div class="mb-3">
+                <label for="address" class="form-label">Location</label>
+                <input type="text" id="address" class="form-control" placeholder="Search for a location" value="{{ event.location }}">
+                <input type="hidden" id="selectedLocation" name="location" value="{{ event.location }}">
+                <select id="locationSuggestions" class="form-select mt-2" style="display: none;" onchange="updateSelectedLocation()">
+                    <option value="">Select a location from suggestions</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                {{ form.notification_hours.label(class="form-label") }}
+                {{ form.notification_hours(class="form-control") }}
             </div>
             <div class="mb-3">
                 {{ form.description.label(class="form-label") }}
                 {{ form.description(class="form-control") }}
             </div>
             <div class="mb-3">
-                {{ form.submit(class="btn btn-primary") }}
+                <button type="submit" class="btn btn-primary">Update Event</button>
+                <a href="{{ url_for('week_view') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
+
+    <!-- Google Places API Script -->
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places"></script>
+    <script>
+        let autocomplete;
+        let currentLocationMarker;
+        let map;
+
+        function initAutocomplete() {
+            const addressInput = document.getElementById('address');
+            autocomplete = new google.maps.places.Autocomplete(addressInput, {
+                types: ['establishment', 'geocode']
+            });
+
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                if (place.geometry) {
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    fetchNearbyLocations(lat, lng);
+                    document.getElementById('selectedLocation').value = place.name || place.formatted_address;
+                }
+            });
+        }
+
+        function fetchNearbyLocations(lat, lng) {
+            fetch(`/api/suggestions?lat=${lat}&lng=${lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    const suggestions = data.suggestions;
+                    const select = document.getElementById('locationSuggestions');
+                    select.innerHTML = '<option value="">Select a location from suggestions</option>';
+                    
+                    suggestions.forEach(location => {
+                        const option = document.createElement('option');
+                        option.value = location;
+                        option.textContent = location;
+                        select.appendChild(option);
+                    });
+                    
+                    select.style.display = 'block';
+                });
+        }
+
+        function updateSelectedLocation() {
+            const locationSelect = document.getElementById('locationSuggestions');
+            const selectedLocation = locationSelect.value;
+            document.getElementById('selectedLocation').value = selectedLocation;
+        }
+
+        // Initialize Google Places Autocomplete
+        window.onload = initAutocomplete;
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
