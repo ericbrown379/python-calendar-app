@@ -58,6 +58,7 @@ class Event(db.Model):
     description = db.Column(db.Text, nullable=True)
     location = db.Column(db.String(255), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    notification_hours = db.Column(db.Integer, nullable=True)
 
     required_attendees = db.relationship('User', secondary=required_attendees, backref='required_events')
     optional_attendees = db.relationship('User', secondary=optional_attendees, backref='optional_events')

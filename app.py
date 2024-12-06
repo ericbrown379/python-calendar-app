@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, DateField, TimeField, SelectMultipleField
 from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
 from models import User, Event, Feedback,retrieve_user_by_id, retrieve_user_by_email, db
 from datetime import date, timedelta, datetime
@@ -436,36 +437,78 @@ def add_event():
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_event(event_id):
-    event = event_manager.storage_manager.retrieve_event(event_id)
+    try:
+        event = event_manager.storage_manager.retrieve_event(event_id)
+        if not event:
+            flash('Event not found.', 'danger')
+            return redirect(url_for('week_view'))
 
-    if event.user_id != current_user.id:
-        flash("You are not authorized to edit this event.", 'danger')
+        if event.user_id != current_user.id:
+            flash("You are not authorized to edit this event.", 'danger')
+            return redirect(url_for('week_view'))
+
+        form = EventForm()
+
+        if request.method == 'GET':
+            # Populate form with existing event data
+            form.name.data = event.name
+            form.date.data = datetime.strptime(event.date, '%Y-%m-%d').date()
+            form.start_time.data = datetime.strptime(event.start_time, '%H:%M:%S').time()
+            form.end_time.data = datetime.strptime(event.end_time, '%H:%M:%S').time()
+            form.description.data = event.description
+            if hasattr(event, 'notification_hours') and event.notification_hours:
+                form.notification_hours.data = str(event.notification_hours)
+
+        if request.method == 'POST':
+            print("Form data received:", request.form)  # Debug print
+            print("Form validation errors:", form.errors)  # Debug print
+            
+            # Get location from the form data
+            location = request.form.get('location')
+            print(f"Location from form: {location}")  # Debug print
+
+            # Set the location in the form
+            form.location.choices = [(location, location)] if location else [('', 'No location')]
+            form.location.data = location
+
+            if form.validate_on_submit():
+                print("Form validated successfully")  # Debug print
+                
+                # Convert form data to strings
+                date_str = form.date.data.strftime('%Y-%m-%d')
+                start_time_str = form.start_time.data.strftime('%H:%M:%S')
+                end_time_str = form.end_time.data.strftime('%H:%M:%S')
+
+                # Update the event
+                updated_event = event_manager.edit_event(
+                    event_id=event_id,
+                    name=form.name.data,
+                    date=date_str,
+                    start_time=start_time_str,
+                    end_time=end_time_str,
+                    location=location,
+                    description=form.description.data
+                )
+
+                if updated_event:
+                    db.session.commit()
+                    flash('Event updated successfully!', 'success')
+                    return redirect(url_for('week_view'))
+                else:
+                    flash('Failed to update event.', 'danger')
+            else:
+                print("Form validation failed:", form.errors)  # Debug print
+                flash('Please check your input.', 'danger')
+
+        return render_template('edit_event.html', 
+                             form=form, 
+                             event=event, 
+                             google_api_key=app.config['GOOGLE_PLACES_API_KEY'])
+
+    except Exception as e:
+        print(f"Error in edit_event route: {str(e)}")  # Debug print
+        flash('An error occurred while updating the event.', 'danger')
         return redirect(url_for('week_view'))
-
-    # Convert the date string back to a date object and times back to time objects
-    event.date = datetime.strptime(event.date, '%Y-%m-%d').date()  # Convert string to date object
-    event.start_time = datetime.strptime(event.start_time, '%H:%M:%S').time()  # Convert string to time object
-    event.end_time = datetime.strptime(event.end_time, '%H:%M:%S').time()  # Convert string to time object
-
-    form = EventForm(obj=event)
-
-    if form.validate_on_submit():
-        # Store times in Eastern Time (no UTC conversion)
-        start_time = form.start_time.data.strftime('%H:%M:%S')
-        end_time = form.end_time.data.strftime('%H:%M:%S')
-
-        event_manager.edit_event(
-            event_id=event_id,
-            name=form.name.data,
-            date=form.date.data,
-            start_time=start_time,
-            end_time=end_time,
-            description=form.description.data
-        )
-        flash('Event updated!', 'success')
-        return redirect(url_for('week_view'))
-
-    return render_template('edit_event.html', form=form, event=event)
 
 @app.route('/delete_event/<int:event_id>', methods=['POST'])
 @login_required
@@ -532,5 +575,5 @@ def reset_db():
 #---------------------------------------------------------------------------------------------#
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True, port=5000)
 
