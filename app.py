@@ -15,6 +15,12 @@ import jwt
 from suggestion_service import EventsuggestionService
 suggestion_service = EventsuggestionService()
 from apscheduler.schedulers.background import BackgroundScheduler
+from flask import render_template, redirect, url_for, flash, request
+from models import BlockedTime
+from forms import BlockOutTimeForm
+from datetime import datetime
+from flask_login import login_required, current_user
+from sqlalchemy import and_ 
 
 load_dotenv()
 
@@ -52,10 +58,31 @@ def inject_google_api_key():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# helper function of blocked time
+def check_for_blocked_time_conflicts(start_time, end_time):
+    """Check if the new event conflicts with blocked times."""
+    print(f"Checking for conflicts: {start_time} to {end_time}")  # Debugging print
+    conflict = BlockedTime.query.filter(
+        and_(
+            BlockedTime.user_id == current_user.id,
+            BlockedTime.start_time <= end_time,
+            BlockedTime.end_time >= start_time
+        )
+    ).first()
+    if conflict:
+        print(f"Conflict detected: Blocked from {conflict.start_time} to {conflict.end_time}")  # Debugging print
+    else:
+        print("No conflicts detected.")  # Debugging print
+    return conflict
+
+
+
+
 # Helper function to format time to AM/PM format
 def format_time_am_pm(time_obj):
     """Convert a time object to 12-hour AM/PM format."""
     return time_obj.strftime('%I:%M %p')
+
 
 @app.route('/api/suggestions/event', methods=['GET'])
 @login_required
@@ -373,42 +400,40 @@ def add_event():
         if request.method == 'POST':
             print("Form data received:", request.form)  # Debug print
             
-            # Get the location from the form data
+            # Get location from the form data
             location = request.form.get('location')
             print(f"Location from form: {location}")  # Debug print
 
-            # Set the location in the form
+            # Set location in the form
             form.location.choices = [(location, location)] if location else [('', 'No location')]
             form.location.data = location
 
-            # Set a default notification hours if none provided
+            # Set default notification hours if none provided
             if not form.notification_hours.data:
                 form.notification_hours.data = '1'
 
             if form.validate_on_submit():
-                print("Form validated successfully")  # Debug print
-                
                 # Format the date and times
-                date_str = form.date.data.strftime('%Y-%m-%d')
-                start_time = form.start_time.data.strftime('%H:%M:%S')
-                end_time = form.end_time.data.strftime('%H:%M:%S')
+                start_time = datetime.combine(form.date.data, form.start_time.data)
+                end_time = datetime.combine(form.date.data, form.end_time.data)
+    
+                print(f"Adding event: {start_time} to {end_time}")  # Debugging print
 
-                print(f"""
-                Creating event with:
-                Name: {form.name.data}
-                Date: {date_str}
-                Start: {start_time}
-                End: {end_time}
-                Location: {location}
-                User ID: {current_user.id}
-                """)  # Debug print
+                # Check for blocked time conflicts
+                conflict = check_for_blocked_time_conflicts(start_time, end_time)
+                if conflict:
+                    print(f"Blocked time conflict: {conflict.start_time} to {conflict.end_time}")  # Debugging print
+                    flash(f"Event conflicts with blocked time: {conflict.start_time} to {conflict.end_time}", "danger")
+                    return redirect(url_for('add_event'))
+
+    # Proceed with event creation if no conflict
 
                 # Create the event
                 event = event_manager.add_event(
                     name=form.name.data,
-                    date=date_str,
-                    start_time=start_time,
-                    end_time=end_time,
+                    date=form.date.data.strftime('%Y-%m-%d'),
+                    start_time=start_time.strftime('%H:%M:%S'),
+                    end_time=end_time.strftime('%H:%M:%S'),
                     location=location,
                     description=form.description.data,
                     user_id=current_user.id,
@@ -417,13 +442,12 @@ def add_event():
                 )
 
                 if event:
-                    print(f"Event created successfully: {event.id}")  # Debug print
                     db.session.commit()  # Ensure changes are committed
                     flash('Event added successfully!', 'success')
                     return redirect(url_for('week_view'))
                 else:
-                    print("Event creation failed")  # Debug print
                     flash('Error creating event. Please try again.', 'danger')
+
             else:
                 print("Form validation errors:", form.errors)  # Debug print
                 flash('Form validation failed. Please check your input.', 'danger')
@@ -433,6 +457,8 @@ def add_event():
         flash('An unexpected error occurred. Please try again.', 'danger')
 
     return render_template('add_event.html', form=form)
+
+
 
 @app.route('/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
@@ -461,13 +487,9 @@ def edit_event(event_id):
 
         if request.method == 'POST':
             print("Form data received:", request.form)  # Debug print
-            print("Form validation errors:", form.errors)  # Debug print
             
             # Get location from the form data
             location = request.form.get('location')
-            print(f"Location from form: {location}")  # Debug print
-
-            # Set the location in the form
             form.location.choices = [(location, location)] if location else [('', 'No location')]
             form.location.data = location
 
@@ -476,16 +498,32 @@ def edit_event(event_id):
                 
                 # Convert form data to strings
                 date_str = form.date.data.strftime('%Y-%m-%d')
-                start_time_str = form.start_time.data.strftime('%H:%M:%S')
-                end_time_str = form.end_time.data.strftime('%H:%M:%S')
+                start_time = datetime.combine(form.date.data, form.start_time.data)
+                end_time = datetime.combine(form.date.data, form.end_time.data)
+
+                print(f"Checking conflicts for {start_time} to {end_time}")  # Debug print
+
+                # Check for conflicts with blocked times (excluding the event being edited)
+                conflict = BlockedTime.query.filter(
+                    and_(
+                        BlockedTime.user_id == current_user.id,
+                        BlockedTime.start_time <= end_time,
+                        BlockedTime.end_time >= start_time,
+                        BlockedTime.id != event_id  # Exclude current event from check
+                    )
+                ).first()
+
+                if conflict:
+                    flash("Event conflicts with a blocked time!", "danger")
+                    return redirect(url_for('edit_event', event_id=event.id))
 
                 # Update the event
                 updated_event = event_manager.edit_event(
                     event_id=event_id,
                     name=form.name.data,
                     date=date_str,
-                    start_time=start_time_str,
-                    end_time=end_time_str,
+                    start_time=start_time.strftime('%H:%M:%S'),
+                    end_time=end_time.strftime('%H:%M:%S'),
                     location=location,
                     description=form.description.data
                 )
@@ -496,19 +534,20 @@ def edit_event(event_id):
                     return redirect(url_for('week_view'))
                 else:
                     flash('Failed to update event.', 'danger')
+
             else:
                 print("Form validation failed:", form.errors)  # Debug print
                 flash('Please check your input.', 'danger')
 
-        return render_template('edit_event.html', 
-                             form=form, 
-                             event=event, 
-                             google_api_key=app.config['GOOGLE_PLACES_API_KEY'])
+        return render_template('edit_event.html', form=form, event=event, google_api_key=app.config['GOOGLE_PLACES_API_KEY'])
 
     except Exception as e:
         print(f"Error in edit_event route: {str(e)}")  # Debug print
         flash('An error occurred while updating the event.', 'danger')
         return redirect(url_for('week_view'))
+    
+
+
 
 @app.route('/delete_event/<int:event_id>', methods=['POST'])
 @login_required
@@ -550,6 +589,88 @@ def start_scheduler():
     print("Scheduler running!")
     if not scheduler.running:
         scheduler.start()
+
+
+@app.route('/block_time', methods=['GET', 'POST'])
+@login_required
+def block_time():
+    form = BlockOutTimeForm()
+    if form.validate_on_submit():
+        # Create a new blocked time
+        blocked_time = BlockedTime(
+            user_id=current_user.id,
+            start_time=form.start_time.data,
+            end_time=form.end_time.data,
+            recurring=form.recurring.data if form.recurring.data != 'none' else None,
+            description=form.description.data
+        )
+        db.session.add(blocked_time)
+        db.session.commit()
+        flash("Time blocked successfully!", "success")
+        return redirect(url_for('week_view'))
+    return render_template('block_time.html', form=form)
+
+
+
+# Route to edit a blocked time
+@app.route('/edit_block/<int:block_id>', methods=['GET', 'POST'])
+@login_required
+def edit_block(block_id):
+    blocked_time = BlockedTime.query.get_or_404(block_id)
+    
+    # Ensure only the owner can edit
+    if blocked_time.user_id != current_user.id:
+        flash("Unauthorized access!", "danger")
+        return redirect(url_for('week_view'))
+    
+    form = BlockOutTimeForm(obj=blocked_time)
+    if form.validate_on_submit():
+        # Update the blocked time details
+        blocked_time.start_time = form.start_time.data
+        blocked_time.end_time = form.end_time.data
+        blocked_time.recurring = form.recurring.data if form.recurring.data != 'none' else None
+        blocked_time.description = form.description.data
+        db.session.commit()
+        flash("Blocked time updated!", "success")
+        return redirect(url_for('week_view'))
+    
+    return render_template('edit_block.html', form=form)
+
+
+# Route to delete a blocked time
+@app.route('/delete_block/<int:block_id>', methods=['POST'])
+@login_required
+def delete_block(block_id):
+    blocked_time = BlockedTime.query.get_or_404(block_id)
+    
+    # Ensure only the owner can delete
+    if blocked_time.user_id != current_user.id:
+        flash("Unauthorized action!", "danger")
+        return redirect(url_for('week_view'))
+    
+    db.session.delete(blocked_time)
+    db.session.commit()
+    flash("Blocked time deleted!", "success")
+    return redirect(url_for('week_view'))
+
+# Function to check if the new event conflicts with a blocked time
+def check_for_blocked_time_conflicts(start_time, end_time):
+    print(f"Checking for conflicts: {start_time} to {end_time}")  # Debugging print
+    conflict = BlockedTime.query.filter(
+        and_(
+            BlockedTime.user_id == current_user.id,
+            BlockedTime.start_time <= end_time,
+            BlockedTime.end_time >= start_time
+        )
+    ).first()
+    if conflict:
+        print(f"Conflict detected: Blocked from {conflict.start_time} to {conflict.end_time}")  # Debugging print
+    else:
+        print("No conflicts detected.")  # Debugging print
+    return conflict
+
+
+
 
 #FOR DEALING WITH DB ERRORS DURING DEVELOPMENT! CHEAP WORKAROUNDS AND SHOULDN'T BE USED WHEN APP IS DEPLOYED!
 #---------------------------------------------------------------------------------------------#
