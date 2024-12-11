@@ -3,7 +3,7 @@ from wtforms import StringField, PasswordField, SubmitField, TextAreaField, Date
 from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email, EqualTo
 from email_manager import check_email_exists
 from models import User
-
+from wtforms import DateTimeLocalField
 
 
 # Custom validator to check for forbidden characters
@@ -126,3 +126,33 @@ class FeedbackForm(FlaskForm):
         ]
     )
     submit = SubmitField('Submit Feedback')
+
+
+from wtforms import DateTimeLocalField
+
+class BlockOutTimeForm(FlaskForm):
+    start_time = DateTimeLocalField(
+        'Start Time',
+        format='%Y-%m-%dT%H:%M',
+        validators=[DataRequired(message="Start time is required.")]
+    )
+    end_time = DateTimeLocalField(
+        'End Time',
+        format='%Y-%m-%dT%H:%M',
+        validators=[DataRequired(message="End time is required.")]
+    )
+    recurring = SelectField(
+        'Recurring Option',
+        choices=[
+            ('none', 'None'),
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly')
+        ],
+        default='none'
+    )
+    description = TextAreaField(
+        'Description (Optional)',
+        validators=[Length(max=200, message="Description must be under 200 characters.")]
+    )
+    submit = SubmitField('Block Time')
+
