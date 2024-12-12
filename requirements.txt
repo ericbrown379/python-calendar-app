@@ -83,7 +83,7 @@ requests-oauthlib==2.0.0
 rsa==4.9
 s3transfer==0.10.1
 scikit-learn==1.5.2
-scipy==1.14.1
+scipy==1.11.4
 seaborn==0.13.2
 setuptools==75.6.0
 six==1.16.0
