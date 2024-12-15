@@ -692,7 +692,7 @@ def admin():
     return render_template('admin_login.html', form=form)
 
 # Admin Logout
-@app.route('/admin/logout')
+@app.route('/admin/logout', methods = ['GET', 'POST'])
 @admin_login_required
 def admin_logout():
     global admin_authenticated
