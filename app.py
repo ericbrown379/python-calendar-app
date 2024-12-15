@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, DateField, TimeField, SelectMultipleField
-from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm
+from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm, AdminLoginForm
 from models import User, Event, Feedback,retrieve_user_by_id, retrieve_user_by_email, db
 from datetime import date, timedelta, datetime
 from event_manager import EventManager
@@ -21,6 +21,7 @@ from forms import BlockOutTimeForm
 from datetime import datetime
 from flask_login import login_required, current_user
 from sqlalchemy import and_ 
+from functools import wraps
 
 load_dotenv()
 
@@ -661,6 +662,50 @@ def delete_block(block_id):
     db.session.commit()
     flash("Blocked time deleted!", "success")
     return redirect(url_for('week_view'))
+
+load_dotenv()
+admin_authenticated = False
+
+# Custom decorator to ensure admin authentication
+def admin_login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        global admin_authenticated
+        if not admin_authenticated:
+            flash('Admin login required!', 'danger')
+            return redirect(url_for('admin'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Admin Login Page that redirects to admin dashboard upon form submission
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    global admin_authenticated
+    form = AdminLoginForm()
+    if form.validate_on_submit():
+        if form.username.data == os.getenv("ADMIN_USERNAME") and form.password.data == os.getenv("ADMIN_PASSWORD"):
+            admin_authenticated = True  # Set admin authentication flag
+            flash('Admin login successful!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Invalid credentials.', 'danger')
+    return render_template('admin_login.html', form=form)
+
+# Admin Logout
+@app.route('/admin/logout')
+@admin_login_required
+def admin_logout():
+    global admin_authenticated
+    admin_authenticated = False  # Clear admin authentication flag
+    flash('Admin logged out successfully.', 'info')
+    return redirect(url_for('admin'))
+
+# Admin Dashboard
+@app.route('/admin_dashboard', methods=['GET', 'POST'])
+@admin_login_required
+def admin_dashboard():
+    events = Event.query.join(User).all()
+    return render_template('admin_dashboard.html', events=events)
 
 # Function to check if the new event conflicts with a blocked time
 def check_for_blocked_time_conflicts(start_time, end_time):

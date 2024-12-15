@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <table border="1" cellpadding="10">
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th>Date</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Description</th>
+                <th>Location</th>
+                <th>Created By</th>
+                <th>Required Attendees</th>
+                <th>Optional Attendees</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.name }}</td>
+                <td>{{ event.get_date_formatted() }}</td>
+                <td>{{ event.get_start_time_formatted() }}</td>
+                <td>{{ event.get_end_time_formatted() }}</td>
+                <td>{{ event.description if event.description else 'N/A' }}</td>
+                <td>{{ event.location if event.location else 'N/A' }}</td>
+                <td>{{ event.user.username }}</td>
+                <td>
+                    {% if event.required_attendees %}
+                        {{ event.required_attendees | join(', ') }}
+                    {% else %}
+                        None
+                    {% endif %}
+                </td>
+                <td>
+                    {% if event.optional_attendees %}
+                        {{ event.optional_attendees | join(', ') }}
+                    {% else %}
+                        None
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
