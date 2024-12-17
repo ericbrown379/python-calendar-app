@@ -115,3 +115,22 @@ def retrieve_user_by_id(user_id):
 
 def retrieve_user_by_email(email):
     return User.query.filter_by(email=email).first()
+
+
+# block out time
+
+class BlockedTime(db.Model):
+    __tablename__ = 'blocked_time'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    recurring = db.Column(db.String(10), nullable=True)  # Options: 'daily', 'weekly', 'none'
+    description = db.Column(db.String(200), nullable=True)
+
+    # Establish relationship with User
+    user = db.relationship('User', backref=db.backref('blocked_times', lazy=True))
+
+    def __repr__(self):
+        return f'<BlockedTime {self.start_time} to {self.end_time} for user {self.user_id}>'
