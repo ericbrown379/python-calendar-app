@@ -106,22 +106,22 @@ def send_email_via_gmail_oauth2(to_email, subject, body):
 def send_verification_email(email, username, token):
     """Creates a verification email"""
     if not token:
-        print("Token is None or empty.")  # Debug print
-        return  # Prevents further execution if token is invalid
+        print("Token is None or empty.")
+        return
 
-    # Generate verification link with token
-    verification_link = url_for('verify_email', token=token, _external=True)    
-    to_email = email  # Corrected this line
+    # Change to frontend URL instead of Flask route
+    verification_link = f"http://localhost:3000/verify-email?token={token}"
+    to_email = email
     subject = "Verify your calendarhive account"
     body = (
-    f"Hello {username},\n\n"
-    "Please verify your email by clicking the following link:\n\n"
-    f"{verification_link}\n\n"
-    "If you did not sign up for an account, please disregard this email.\n\n"
-    "Best regards,\n"
-    "The CalendarHive Team"
-)
-    print(body)  # Debug print to check email body
+        f"Hello {username},\n\n"
+        "Please verify your email by clicking the following link:\n\n"
+        f"{verification_link}\n\n"
+        "If you did not sign up for an account, please disregard this email.\n\n"
+        "Best regards,\n"
+        "The CalendarHive Team"
+    )
+    print(body)
     send_email_via_gmail_oauth2(to_email, subject, body)
 
 def send_password_reset_email(email, username, token):

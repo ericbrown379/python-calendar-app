@@ -21,6 +21,7 @@ from forms import BlockOutTimeForm
 from datetime import datetime
 from flask_login import login_required, current_user
 from sqlalchemy import and_ 
+from flask_cors import CORS  # Add this at the top with other imports
 
 load_dotenv()
 
@@ -122,21 +123,39 @@ def index():
     else:
         return redirect(url_for('login'))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
-            if user.is_verified:  # Check if the user is verified
-                login_user(user)
-                flash('Login successful!', 'success')
-                return redirect(url_for('week_view'))  # Change to your dashboard route
-            else:
-                flash('Please verify your email before logging in.', 'danger')
-        else:
-            flash('Invalid email or password.', 'danger')
-    return render_template('login.html', form=form)
+    try:
+        data = request.get_json()
+        
+        user = User.query.filter_by(username=data['username']).first()
+        if not user or not user.check_password(data['password']):
+            return jsonify({
+                'message': 'Invalid username or password'
+            }), 401
+
+        if not user.is_verified:
+            return jsonify({
+                'message': 'Please verify your email before logging in',
+                'requires_verification': True
+            }), 403
+
+        # Login successful
+        login_user(user)
+        return jsonify({
+            'message': 'Login successful',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        }), 200
+
+    except Exception as e:
+        print("Login error:", str(e))
+        return jsonify({
+            'message': 'Login failed'
+        }), 400
 
 @app.route('/api/suggestions')
 def get_suggestions():
@@ -149,46 +168,143 @@ def get_suggestions():
     return jsonify({'suggestions': []})
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST', 'OPTIONS'])
 def register():
-    form = RegisterForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
-
+    # Handle preflight request
+    if request.method == 'OPTIONS':
+        return jsonify({'message': 'OK'}), 200
+        
+    if request.method == 'POST':
         try:
-            db.session.add(user)
-            db.session.commit()  # Commit to generate the user ID
-            print(f"User ID: {user.id}")  # Debugging line
-            user.token = user.generate_verification_token()  # Ensure this method returns a valid token
-            print(f"Token generated: {user.token}")  # Debugging line
-            if user.token:
-                send_verification_email(user.email, user.username, user.token)
-                flash('Account created! Please check your email to verify your account.', 'success')
-                return redirect(url_for('login'))
+            print("Received headers:", dict(request.headers))
+            print("Received data:", request.get_data())
+            
+            # Handle both JSON and form data
+            print("Content-Type:", request.headers.get('Content-Type'))  # Debug print
+            
+            if request.is_json:
+                data = request.get_json()
+                print("Received JSON data:", data)  # Debug print
             else:
-                print("Token generation failed")  # Log failure
-                flash('There was an error generating your verification token.', 'danger')
-        except Exception as e:
-            db.session.rollback()  # Rollback in case of error
-            print(f"Exception occurred: {e}")  # Log the exception
-            flash('An error occurred while creating your account.', 'danger')
-    return render_template('register.html', form=form)
+                data = request.form
+                print("Received form data:", data)  # Debug print
 
-@app.route('/verify_email/<token>')
-def verify_email(token):
-    user_id = verify_token(token)
-    if user_id is None:
-        flash('Verification link is invalid or has expired.', 'danger')
-        return redirect(url_for('login'))
-    user = User.query.get(user_id)
-    if user:
+            # Validate required fields
+            required_fields = ['email', 'username', 'password']
+            if not all(k in data for k in required_fields):
+                missing_fields = [k for k in required_fields if k not in data]
+                return jsonify({
+                    'message': f'Missing required fields: {", ".join(missing_fields)}'
+                }), 400
+
+            # Check if user already exists
+            if User.query.filter_by(username=data['username']).first():
+                return jsonify({
+                    'message': 'Username already taken'
+                }), 400
+            
+            if User.query.filter_by(email=data['email']).first():
+                return jsonify({
+                    'message': 'Email already registered'
+                }), 400
+
+            # Create new user
+            user = User(username=data['username'], email=data['email'])
+            user.set_password(data['password'])
+
+            try:
+                db.session.add(user)
+                db.session.commit()
+                print("User added to database successfully")  # Debug print
+            except Exception as e:
+                print("Database error:", str(e))  # Debug print
+                db.session.rollback()
+                return jsonify({
+                    'message': f'Database error: {str(e)}'
+                }), 500
+
+            # Generate verification token
+            try:
+                user.token = user.generate_verification_token()
+                if user.token:
+                    send_verification_email(user.email, user.username, user.token)
+                    response_data = {
+                        'message': 'Account created! Please check your email to verify your account.',
+                        'success': True
+                    }
+                    print("Sending success response:", response_data)  # Debug print
+                    return jsonify(response_data), 200
+                else:
+                    return jsonify({
+                        'message': 'Error generating verification token'
+                    }), 500
+            except Exception as e:
+                print("Token/email error:", str(e))  # Debug print
+                return jsonify({
+                    'message': f'Error sending verification email: {str(e)}'
+                }), 500
+
+        except Exception as e:
+            print("General error:", str(e))  # Debug print
+            return jsonify({
+                'message': f'Registration failed: {str(e)}'
+            }), 400
+
+    # GET request returns 405 Method Not Allowed
+    return jsonify({'message': 'Method not allowed'}), 405
+
+@app.route('/verify-email', methods=['GET', 'POST'])
+def verify_email():
+    """Handle both API and browser-based email verification"""
+    try:
+        # For API requests (POST)
+        if request.method == 'POST' and request.is_json:
+            data = request.get_json()
+            token = data.get('token')
+        # For browser requests (GET)
+        else:
+            token = request.args.get('token')
+        
+        if not token:
+            if request.is_json:
+                return jsonify({'message': 'No token provided'}), 400
+            flash('No verification token provided.', 'error')
+            return redirect(url_for('login'))
+
+        user_id = verify_token(token)
+        if not user_id:
+            if request.is_json:
+                return jsonify({'message': 'Invalid or expired token'}), 400
+            flash('Invalid or expired verification link.', 'error')
+            return redirect(url_for('login'))
+
+        user = User.query.get(user_id)
+        if not user:
+            if request.is_json:
+                return jsonify({'message': 'User not found'}), 404
+            flash('User not found.', 'error')
+            return redirect(url_for('login'))
+
         user.is_verified = True
         db.session.commit()
-        flash('Email verified successfully!', 'success')
-    else:
-        flash('User was not found, please try verifying again!.', 'danger')
-    return redirect(url_for('login'))
+
+        if request.is_json:
+            return jsonify({
+                'message': 'Email verified successfully',
+                'success': True
+            }), 200
+        
+        flash('Email verified successfully! You can now login.', 'success')
+        return redirect(url_for('login'))
+
+    except Exception as e:
+        print(f"Verification error: {str(e)}")
+        if request.is_json:
+            return jsonify({
+                'message': f'Verification failed: {str(e)}'
+            }), 400
+        flash('Verification failed. Please try again.', 'error')
+        return redirect(url_for('login'))
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
@@ -704,7 +820,15 @@ def reset_db():
         click.echo("Database reset successfully.")
 #---------------------------------------------------------------------------------------------#
 
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],  # Frontend URL remains the same
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port)
 

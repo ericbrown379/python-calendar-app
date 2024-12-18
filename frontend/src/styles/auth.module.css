@@ -1,0 +1,295 @@
+.container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    overflow: hidden;
+    position: relative;
+}
+
+.ring {
+    position: relative;
+    width: 500px;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+}
+
+.ringCircle {
+    position: absolute;
+    inset: 0;
+    border: 2px solid #fff;
+    transition: 0.5s;
+}
+
+.ringCircle:nth-child(1) {
+    border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+    animation: animate 6s linear infinite;
+    border-color: #00ff0a;
+}
+
+.ringCircle:nth-child(2) {
+    border-radius: 41% 44% 56% 59% / 38% 62% 63% 37%;
+    animation: animate 4s linear infinite;
+    border-color: #ff0057;
+}
+
+.ringCircle:nth-child(3) {
+    border-radius: 41% 44% 56% 59% / 38% 62% 63% 37%;
+    animation: animate2 10s linear infinite;
+    border-color: #fffd44;
+}
+
+.ring:hover .ringCircle {
+    border-width: 6px;
+    filter: drop-shadow(0 0 20px var(--clr));
+}
+
+@keyframes animate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes animate2 {
+    0% { transform: rotate(360deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.card {
+    background: transparent;
+    backdrop-filter: blur(0);
+    border: none;
+    box-shadow: none;
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.logoContainer {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.title {
+    color: white;
+    text-align: center;
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.label {
+    color: white;
+    font-weight: 500;
+}
+
+.input {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.button {
+    background: #0070f3;
+    color: white;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.button:hover {
+    background: #0051cc;
+}
+
+.links {
+    margin-top: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.link {
+    color: #fff;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.calendarBackground {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 0;
+}
+
+.calendarPreview {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.2);
+    width: 90%;
+    height: 90%;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.calendarHeader {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-align: center;
+    padding: 8px 0;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    height: calc(100% - 40px);
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.calendarColumn {
+    position: relative;
+    display: grid;
+    grid-template-rows: repeat(24, 1fr);
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.calendarCell {
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hourMarker {
+    position: absolute;
+    left: 4px;
+    top: -6px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: bold;
+}
+
+.calendarEvent {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    padding: 6px;
+    font-size: 12px;
+    color: white;
+    border-radius: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    opacity: 1;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+}
+
+.demoEvent {
+    position: absolute;
+    background: rgba(0, 122, 255, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    animation: fadeInOut 4s ease-in-out forwards;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 200px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(0, 122, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    20% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}
+
+.loginWrapper {
+    position: absolute;
+    z-index: 3;
+}
+
+.error {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 0, 0.2);
+    color: #ff3333;
+    padding: 0.75rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.button.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.input:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.checkboxGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #0070f3;
+}
+
+.checkboxLabel {
+    color: white;
+    font-size: 0.9rem;
+}
