@@ -33,27 +33,23 @@ export default function Login() {
 
       const data = await response.json();
 
-      if (response.status === 401) {
-        setError('Invalid username or password');
+      if (!response.ok) {
+        setError(data.message || 'Login failed');
         setIsLoading(false);
         return;
-      }
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
       }
 
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('isLoggedIn', 'true');
-        
         await router.push('/calendar');
       } else {
         throw new Error('No user data received');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    } finally {
       setIsLoading(false);
     }
   };

@@ -56,3 +56,23 @@ body {
 .fc .fc-day-today {
   background-color: var(--fc-today-bg-color) !important;
 }
+
+/* Add these styles for Google Places Autocomplete dropdown */
+.pac-container {
+  border-radius: 4px;
+  margin-top: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ddd;
+  font-family: inherit;
+  z-index: 1000;
+}
+
+.pac-item {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pac-item:hover {
+  background-color: #f7f7f7;
+}

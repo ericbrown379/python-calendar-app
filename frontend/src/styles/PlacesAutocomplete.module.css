@@ -1,6 +1,6 @@
 .container {
+  position: relative;
   width: 100%;
-  margin-top: 8px;
 }
 
 .input {
@@ -8,11 +8,21 @@
   padding: 8px 12px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 16px;
+  min-height: 40px;
 }
 
 .input:focus {
   outline: none;
   border-color: #3B82F6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-} 
+}
+
+.error {
+  color: #ff0000;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* Create a separate global CSS file for these styles */
+/* Move these styles to styles/globals.css */

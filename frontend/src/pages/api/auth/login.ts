@@ -9,20 +9,25 @@ export default async function handler(
   }
 
   try {
-    console.log('Login request body:', req.body);
-
     const response = await fetch('http://127.0.0.1:5001/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(req.body),
+      credentials: 'include'
     });
 
-    const data = await response.json();
-    console.log('Flask response:', data);
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Expected JSON response from server');
+    }
 
-    // Forward the status from Flask
+    const data = await response.json();
+    
+    // Forward the response
     return res.status(response.status).json(data);
 
   } catch (error) {

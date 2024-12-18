@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styles from '@/styles/EventModal.module.css';
 import { CalendarEvent } from '@/services/eventService';
 import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
+import { useRouter } from 'next/router';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export default function EventModal({ isOpen, onClose, onSave, event, mode }: Eve
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [locationType, setLocationType] = useState<'current' | 'address'>('current');
   const [suggestedLocations, setSuggestedLocations] = useState<string[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     if (event) {
@@ -65,62 +67,48 @@ export default function EventModal({ isOpen, onClose, onSave, event, mode }: Eve
     }
   };
 
-  const fetchEventSuggestions = async (date: Date | string) => {
+  const fetchEventSuggestions = async (date: Date) => {
     try {
-      // First check authentication status
-      const authResponse = await fetch('http://localhost:5001/api/auth/status', {
-        credentials: 'include'
+      // First check if user is authenticated
+      const authResponse = await fetch('http://127.0.0.1:5001/check-auth', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
       });
 
       if (!authResponse.ok) {
+        console.error('Auth check failed:', authResponse.status);
         if (authResponse.status === 401) {
-          console.log('User not authenticated, redirecting to login...');
-          window.location.href = '/login';
-          return;
+          // Handle unauthorized - maybe redirect to login
+          router.push('/login');
         }
-        throw new Error(`Auth check failed: ${authResponse.status}`);
+        return []; // Return empty array instead of throwing error
       }
 
       console.log("Fetching suggestions for date:", date);
-      
-      const dateObj = date instanceof Date ? date : new Date(date);
-      const formattedDate = dateObj.toISOString().split('T')[0];
-      
-      const response = await fetch('http://localhost:5001/api/suggestions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          date: formattedDate
-        })
-      });
+      const response = await fetch(
+        `http://127.0.0.1:5001/suggestions/event?date=${date.toISOString().split('T')[0]}`,
+        {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        }
+      );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        
-        if (response.status === 401) {
-          window.location.href = '/login';
-          return;
-        }
-        
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.error('Failed to fetch suggestions:', response.status);
+        return [];
       }
 
       const data = await response.json();
-      console.log("Received suggestions:", data);
-      
-      if (data.suggestions && Array.isArray(data.suggestions)) {
-        setSuggestions(data.suggestions);
-      } else {
-        console.error("Invalid suggestions format:", data);
-        setSuggestions([]);
-      }
+      return data.suggestions || [];
     } catch (error) {
       console.error('Error fetching suggestions:', error);
-      setSuggestions([]);
+      return [];
     }
   };
 
