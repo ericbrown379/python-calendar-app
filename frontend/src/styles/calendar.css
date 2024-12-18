@@ -1,0 +1,96 @@
+/* FullCalendar Base Styles */
+.fc {
+  direction: ltr;
+  text-align: left;
+}
+
+.fc table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.fc th, .fc td {
+  vertical-align: top;
+  padding: 0;
+}
+
+/* Header Styles */
+.fc-header-toolbar {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.fc-toolbar-title {
+  font-size: 1.25rem !important;
+  font-weight: 600;
+}
+
+.fc-button {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+}
+
+.fc-button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.fc-button-active {
+  background-color: #e5e7eb !important;
+  border-color: #9ca3af !important;
+}
+
+/* Calendar Grid */
+.fc-daygrid-day, .fc-timegrid-slot {
+  background-color: #fff;
+}
+
+.fc-day-today {
+  background-color: #f3f4f6 !important;
+}
+
+.fc-event {
+  background-color: #3b82f6;
+  border: 1px solid #2563eb;
+  padding: 2px 4px;
+  margin: 1px 0;
+  cursor: pointer;
+}
+
+.fc-timegrid-event {
+  border-radius: 4px;
+}
+
+/* Time Grid specific */
+.fc-timegrid-slot-label {
+  color: #6b7280;
+}
+
+.fc-timegrid-axis {
+  border-right: 1px solid #e5e7eb;
+}
+
+.fc-col-header-cell {
+  padding: 0.5rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Business Hours */
+.fc-businessHours {
+  background-color: #f3f4f6;
+}
+
+/* Now indicator */
+.fc-timegrid-now-indicator-line {
+  border-color: #ef4444;
+}
+
+.fc-timegrid-now-indicator-arrow {
+  border-color: #ef4444;
+  border-width: 5px;
+} 

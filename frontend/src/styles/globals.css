@@ -19,3 +19,40 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FullCalendar Custom Styles */
+.fc {
+  --fc-border-color: #e5e7eb;
+  --fc-button-text-color: #374151;
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: #d1d5db;
+  --fc-button-hover-bg-color: #f3f4f6;
+  --fc-button-hover-border-color: #9ca3af;
+  --fc-button-active-bg-color: #e5e7eb;
+  --fc-today-bg-color: #dbeafe;
+  --fc-event-bg-color: #3b82f6;
+  --fc-event-border-color: #2563eb;
+}
+
+.fc .fc-button {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.fc .fc-event {
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.fc .fc-day-today {
+  background-color: var(--fc-today-bg-color) !important;
+}

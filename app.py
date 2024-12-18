@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, current_app, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
@@ -22,6 +22,7 @@ from datetime import datetime
 from flask_login import login_required, current_user
 from sqlalchemy import and_ 
 from flask_cors import CORS  # Add this at the top with other imports
+from functools import wraps
 
 load_dotenv()
 
@@ -84,89 +85,65 @@ def format_time_am_pm(time_obj):
     """Convert a time object to 12-hour AM/PM format."""
     return time_obj.strftime('%I:%M %p')
 
-
-@app.route('/api/suggestions/event', methods=['GET'])
-@login_required
-def get_event_suggestions():
-    date_str = request.args.get('date')
-    if not date_str:
-        return jsonify({'error': 'Date parameter is required '}, 400)
-    
-    try:
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        suggestions = suggestion_service.get_suggestions(current_user.id, target_date)
-        return jsonify({
-            'suggestions': [{
-                'id': s.id,
-                'name': s.event_name,
-                'time': s.suggested_time,
-                'explanation': s.explanation,
-                'score': s.similarity_score
-            } for s in suggestions]
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-
-@app.route('/api/suggestions/dismiss/<int:suggestion_id>', methods=['POST'])
-@login_required
-def dismiss_suggestion(suggestion_id):
-    feedback = request.json.get('feedback')
-    suggestion_service.dismiss_suggestion(suggestion_id, feedback)
-    return jsonify({'status': 'success'})
-
-
-@app.route('/')
-def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('week_view'))
-    else:
-        return redirect(url_for('login'))
-
-@app.route('/login', methods=['POST'])
-def login():
-    try:
-        data = request.get_json()
-        
-        user = User.query.filter_by(username=data['username']).first()
-        if not user or not user.check_password(data['password']):
+def json_login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
             return jsonify({
-                'message': 'Invalid username or password'
+                'error': 'Unauthorized',
+                'message': 'Please log in to access this resource'
             }), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
-        if not user.is_verified:
-            return jsonify({
-                'message': 'Please verify your email before logging in',
-                'requires_verification': True
-            }), 403
+@app.route('/api/suggestions', methods=['GET', 'POST', 'OPTIONS'])
+@json_login_required
+def get_suggestions():
+    # Handle preflight request
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
 
-        # Login successful
-        login_user(user)
-        return jsonify({
-            'message': 'Login successful',
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
+    try:
+        print("Request received:", request.method)
+        print("User authenticated:", current_user.is_authenticated)
+        print("Headers:", dict(request.headers))
+
+        if request.method == 'POST':
+            print("Raw request data:", request.get_data())
+            data = request.get_json(force=True)  # Try to force JSON parsing
+            print("Parsed JSON data:", data)
+            
+            if not data or 'date' not in data:
+                return jsonify({'error': 'Date is required'}), 400
+            date_str = data['date']
+        else:
+            date_str = request.args.get('date')
+            if not date_str:
+                return jsonify({'error': 'Date parameter is required'}), 400
+
+        print("Processing date:", date_str)
+
+        mock_suggestions = [
+            {
+                'id': 1,
+                'name': 'Test Event',
+                'time': f'{date_str}T10:00:00',
+                'explanation': 'Test suggestion'
             }
-        }), 200
+        ]
+        
+        response = jsonify({'suggestions': mock_suggestions})
+        return response
 
     except Exception as e:
-        print("Login error:", str(e))
-        return jsonify({
-            'message': 'Login failed'
-        }), 400
-
-@app.route('/api/suggestions')
-def get_suggestions():
-    lat = request.args.get('lat')
-    lng = request.args.get('lng')
-
-    if lat and lng:
-        suggestions = event_manager.suggest_locations((float(lat), float(lng)))
-        return jsonify({'suggestions': suggestions})
-    return jsonify({'suggestions': []})
-
+        print(f"Error in get_suggestions: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/register', methods=['GET', 'POST', 'OPTIONS'])
 def register():
@@ -211,19 +188,22 @@ def register():
             # Create new user
             user = User(username=data['username'], email=data['email'])
             user.set_password(data['password'])
+            # Set user as verified immediately for testing
+            user.is_verified = True  # Add this line
 
             try:
                 db.session.add(user)
                 db.session.commit()
-                print("User added to database successfully")  # Debug print
+                print("User added to database successfully")
             except Exception as e:
-                print("Database error:", str(e))  # Debug print
+                print("Database error:", str(e))
                 db.session.rollback()
                 return jsonify({
                     'message': f'Database error: {str(e)}'
                 }), 500
 
-            # Generate verification token
+            # Comment out or remove email verification for now
+            """
             try:
                 user.token = user.generate_verification_token()
                 if user.token:
@@ -232,20 +212,27 @@ def register():
                         'message': 'Account created! Please check your email to verify your account.',
                         'success': True
                     }
-                    print("Sending success response:", response_data)  # Debug print
+                    print("Sending success response:", response_data)
                     return jsonify(response_data), 200
                 else:
                     return jsonify({
                         'message': 'Error generating verification token'
                     }), 500
             except Exception as e:
-                print("Token/email error:", str(e))  # Debug print
+                print("Token/email error:", str(e))
                 return jsonify({
                     'message': f'Error sending verification email: {str(e)}'
                 }), 500
+            """
+            
+            # Return success immediately
+            return jsonify({
+                'message': 'Account created successfully!',
+                'success': True
+            }), 200
 
         except Exception as e:
-            print("General error:", str(e))  # Debug print
+            print("Registration error:", str(e))
             return jsonify({
                 'message': f'Registration failed: {str(e)}'
             }), 400
@@ -821,12 +808,68 @@ def reset_db():
 #---------------------------------------------------------------------------------------------#
 
 CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:3000"],  # Frontend URL remains the same
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"]
     }
 })
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Credentials", "true")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+        return response
+
+@app.route('/api/events', methods=['GET'])
+@json_login_required
+def get_events():
+    try:
+        events = Event.query.filter_by(user_id=current_user.id).all()
+        return jsonify({
+            'events': [{
+                'id': event.id,
+                'title': event.name,
+                'start': f"{event.date}T{event.start_time}",
+                'end': f"{event.date}T{event.end_time}",
+                'description': event.description,
+                'location': event.location
+            } for event in events]
+        })
+    except Exception as e:
+        print(f"Error fetching events: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users', methods=['GET'])
+@json_login_required
+def get_users():
+    try:
+        users = User.query.all()
+        return jsonify([{
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
+        } for user in users])
+    except Exception as e:
+        print(f"Error fetching users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/auth/status', methods=['GET'])
+def auth_status():
+    if current_user.is_authenticated:
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'id': current_user.id,
+                'username': current_user.username
+            }
+        })
+    return jsonify({'authenticated': False}), 401
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
