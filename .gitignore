@@ -5,6 +5,7 @@ env/
 __pycache__/
 *.pyc
 
+analytics_credentials.json
 
 # Ignore SQLite database file
 *.db
