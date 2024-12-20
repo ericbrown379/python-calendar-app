@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+import requests
 from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, DateField, TimeField, SelectMultipleField
 from forms import LoginForm, RegisterForm, EventForm, ForgotPasswordForm, ResetPasswordForm, FeedbackForm, AdminLoginForm
 from models import User, Event, Feedback,retrieve_user_by_id, retrieve_user_by_email, db
@@ -22,14 +23,55 @@ from datetime import datetime
 from flask_login import login_required, current_user
 from sqlalchemy import and_ 
 from functools import wraps
-
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import RunReportRequest
 load_dotenv()
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///calendar.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['GOOGLE_PLACES_API_KEY'] = os.getenv('GOOGLE_PLACES_API_KEY')
+
+#Google Analytics API data posting and fetching code
+
+MEASUREMENT_ID = os.getenv('GA_MEASUREMENT_ID')
+API_SECRET = os.getenv('GA_API_SECRET')
+
+def send_event_to_google_analytics(event_name):
+    if not MEASUREMENT_ID or not API_SECRET:
+        raise ValueError("Missing GA_MEASUREMENT_ID or GA_API_SECRET in the environment.")
+    
+    client_id = "1234567890.1234567890"  # Replace with dynamically generated client_id if needed
+    payload = {
+        "client_id": client_id,
+        "events": [
+            {
+                "name": event_name,
+                "params": {
+                    "value": 1
+                }
+            }
+        ]
+    }
+
+    url = f"https://www.google-analytics.com/mp/collect?measurement_id={MEASUREMENT_ID}&api_secret={API_SECRET}"
+
+    try:
+        response = requests.post(
+            f"https://www.google-analytics.com/mp/collect?measurement_id={MEASUREMENT_ID}&api_secret={API_SECRET}",
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+
+        if response.status_code == 204:
+            print(f"Event '{event_name}' sent successfully to Google Analytics.")
+        else:
+            print(f"Error sending event '{event_name}': {response.status_code}, {response.text}")
+    except Exception as e:
+        print(f"Error: {e}")
+
 
 db.init_app(app)
 migrate = Migrate(app, db)  # Set up Flask-Migrate here
@@ -446,6 +488,7 @@ def add_event():
 
                 if event:
                     db.session.commit()  # Commit the new event
+                    send_event_to_google_analytics('event_created')
                     flash('Event added successfully!', 'success')
                     return redirect(url_for('week_view'))
                 else:
@@ -541,6 +584,7 @@ def edit_event(event_id):
 
                 if updated_event:
                     db.session.commit()
+                    send_event_to_google_analytics('event_edited')
                     flash('Event updated successfully!', 'success')
                     return redirect(url_for('week_view'))
                 else:
@@ -568,6 +612,7 @@ def delete_event(event_id):
         return redirect(url_for('week_view'))
 
     event_manager.delete_event(event_id)
+    send_event_to_google_analytics('event_deleted')
     flash('Event deleted!', 'success')
     return redirect(url_for('week_view'))
 
