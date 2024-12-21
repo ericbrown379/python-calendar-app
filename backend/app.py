@@ -21,10 +21,19 @@ from forms import BlockOutTimeForm
 from datetime import datetime
 from flask_login import login_required, current_user
 from sqlalchemy import and_ 
+from flask_cors import CORS
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],  # Your Next.js frontend URL
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True  # Important for cookies/sessions
+    }
+})
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///calendar.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -705,5 +714,5 @@ def reset_db():
 #---------------------------------------------------------------------------------------------#
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=8080)
 
