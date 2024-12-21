@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Dict
-from models import EventSuggestion, Event, db
-from recommendation_engine import EventRecommendar
+from backend.models import EventSuggestion, Event, db
+from backend.recommendation_engine import EventRecommendar
 
 class EventsuggestionService:
     def __init__(self):

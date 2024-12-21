@@ -1,6 +1,6 @@
 # view_accounts.py
-from app import app, db
-from models import User
+from backend.app import app, db
+from backend.models import User
 
 def view_accounts():
     with app.app_context():

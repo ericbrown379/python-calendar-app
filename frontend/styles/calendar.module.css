@@ -1,0 +1,184 @@
+.calendarContainer {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .welcomeHeader {
+    color: #333;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .calendar {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* FullCalendar customizations */
+  .calendar :global(.fc) {
+    --fc-border-color: #e5e7eb;
+    --fc-button-bg-color: #3b82f6;
+    --fc-button-border-color: #3b82f6;
+    --fc-button-hover-bg-color: #2563eb;
+    --fc-button-hover-border-color: #2563eb;
+    --fc-button-active-bg-color: #1d4ed8;
+    --fc-button-active-border-color: #1d4ed8;
+  }
+
+  /* Base styles */
+  .pageContainer {
+    min-height: 100vh;
+    transition: all 0.3s ease;
+  }
+
+  /* Light mode */
+  .lightMode {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+  }
+
+  .lightMode .navbar {
+    background: white;
+    color: #2c3e50;
+  }
+
+  .lightMode .calendarWrapper {
+    background: white;
+  }
+
+  /* Dark mode */
+  .darkMode {
+    background: #1a1a1a;
+    color: #fff;
+  }
+
+  .darkMode .navbar {
+    background: #2d2d2d;
+    color: #fff;
+  }
+
+  .darkMode .calendarWrapper {
+    background: #2d2d2d;
+  }
+
+  .darkMode .welcomeHeader {
+    color: #fff;
+  }
+
+  .darkMode :global(.fc) {
+    /* Dark mode calendar customizations */
+    --fc-border-color: #404040;
+    --fc-page-bg-color: #2d2d2d;
+    --fc-neutral-bg-color: #404040;
+    --fc-neutral-text-color: #fff;
+    --fc-button-text-color: #fff;
+    --fc-button-bg-color: #4a4a4a;
+    --fc-button-border-color: #4a4a4a;
+    --fc-button-hover-bg-color: #666;
+    --fc-button-hover-border-color: #666;
+    --fc-button-active-bg-color: #808080;
+    --fc-button-active-border-color: #808080;
+    --fc-today-bg-color: rgba(255, 255, 255, 0.1);
+    --fc-non-business-color: rgba(255, 255, 255, 0.02);
+  }
+
+  .darkMode :global(.fc-theme-standard) td,
+  .darkMode :global(.fc-theme-standard) th {
+    border-color: #404040;
+  }
+
+  .darkMode :global(.fc-timegrid-slot-label),
+  .darkMode :global(.fc-col-header-cell-cushion),
+  .darkMode :global(.fc-toolbar-title) {
+    color: #fff;
+  }
+
+  /* Navbar styles */
+  .navbar {
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+
+  .navButtons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  /* Theme toggle button */
+  .themeToggle {
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.5rem;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  .themeToggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Rest of your existing styles... */
+  .welcomeHeader {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .logoutButton {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  .logoutButton:hover {
+    background: #c0392b;
+  }
+
+  .calendarHeader {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .addEventButton {
+    background: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .addEventButton:hover {
+    background: #2563eb;
+  }
+
+  /* Dark mode support */
+  :global(.darkMode) .addEventButton {
+    background: #4b5563;
+  }
+
+  :global(.darkMode) .addEventButton:hover {
+    background: #374151;
+  }

@@ -1,5 +1,5 @@
 import requests
-from event_manager import EventManager
+from backend.event_manager import EventManager
 
 # URL for your Flask app's event creation route
 # url = "http://127.0.0.1:5000/add_event"

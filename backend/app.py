@@ -28,10 +28,10 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000"],  # Your Next.js frontend URL
+        "origins": ["http://localhost:3000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True  # Important for cookies/sessions
+        "supports_credentials": True
     }
 })
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -133,56 +133,78 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
-            if user.is_verified:  # Check if the user is verified
+    if request.method == 'POST':
+        data = request.get_json()
+        user = User.query.filter_by(username=data['username']).first()
+        
+        if user and user.check_password(data['password']):
+            if user.is_verified:
                 login_user(user)
-                flash('Login successful!', 'success')
-                return redirect(url_for('week_view'))  # Change to your dashboard route
+                return jsonify({
+                    'message': 'Login successful!',
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email
+                    }
+                }), 200
             else:
-                flash('Please verify your email before logging in.', 'danger')
+                return jsonify({'error': 'Please verify your email before logging in.'}), 401
         else:
-            flash('Invalid email or password.', 'danger')
-    return render_template('login.html', form=form)
+            return jsonify({'error': 'Invalid username or password'}), 401
 
-@app.route('/api/suggestions')
+    return jsonify({'error': 'Invalid request method'}), 405
+
+@app.route('/api/suggestions', methods=['GET'])
+@login_required
 def get_suggestions():
+    query = request.args.get('query')
     lat = request.args.get('lat')
     lng = request.args.get('lng')
 
-    if lat and lng:
+    if query:
+        # Handle text-based search
+        suggestions = event_manager.search_places(query)
+        return jsonify({'suggestions': suggestions})
+    elif lat and lng:
+        # Handle location-based search
         suggestions = event_manager.suggest_locations((float(lat), float(lng)))
         return jsonify({'suggestions': suggestions})
+    
     return jsonify({'suggestions': []})
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    form = RegisterForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        # Check if user already exists
+        if User.query.filter_by(username=data['username']).first():
+            return jsonify({'error': 'Username already exists'}), 400
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({'error': 'Email already exists'}), 400
 
         try:
+            user = User(username=data['username'], email=data['email'])
+            user.set_password(data['password'])
+            # Temporarily set user as verified
+            user.is_verified = True
             db.session.add(user)
-            db.session.commit()  # Commit to generate the user ID
-            print(f"User ID: {user.id}")  # Debugging line
-            user.token = user.generate_verification_token()  # Ensure this method returns a valid token
-            print(f"Token generated: {user.token}")  # Debugging line
-            if user.token:
-                send_verification_email(user.email, user.username, user.token)
-                flash('Account created! Please check your email to verify your account.', 'success')
-                return redirect(url_for('login'))
-            else:
-                print("Token generation failed")  # Log failure
-                flash('There was an error generating your verification token.', 'danger')
+            db.session.commit()
+            
+            # Comment out or remove email verification
+            # user.token = user.generate_verification_token()
+            # if user.token:
+            #     send_verification_email(user.email, user.username, user.token)
+            
+            return jsonify({'message': 'Account created successfully!'}), 201
+                
         except Exception as e:
-            db.session.rollback()  # Rollback in case of error
-            print(f"Exception occurred: {e}")  # Log the exception
-            flash('An error occurred while creating your account.', 'danger')
-    return render_template('register.html', form=form)
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+
+    return jsonify({'error': 'Invalid request method'}), 405
 
 @app.route('/verify_email/<token>')
 def verify_email(token):
@@ -712,6 +734,38 @@ def reset_db():
         db.create_all()  # Create all tables
         click.echo("Database reset successfully.")
 #---------------------------------------------------------------------------------------------#
+
+@app.route('/api/events', methods=['GET'])
+@login_required
+def get_events():
+    try:
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        if not start_date or not end_date:
+            return jsonify({'error': 'Start and end dates are required'}), 400
+
+        events = Event.query.filter(
+            Event.user_id == current_user.id,
+            Event.date >= start_date,
+            Event.date <= end_date
+        ).all()
+
+        # Format events for FullCalendar
+        events_data = [{
+            'id': event.id,
+            'title': event.name,  # FullCalendar uses 'title' instead of 'name'
+            'start': f"{event.date}T{event.start_time}",  # Combine date and time
+            'end': f"{event.date}T{event.end_time}",
+            'location': event.location,
+            'description': event.description,
+            'allDay': False
+        } for event in events]
+
+        return jsonify(events_data)  # Return array directly as FullCalendar expects
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

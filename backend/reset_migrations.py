@@ -1,5 +1,5 @@
 # reset_migrations.py
-from app import app, db
+from backend.app import app, db
 import os
 import shutil
 from sqlalchemy import text

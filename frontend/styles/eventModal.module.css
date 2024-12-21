@@ -1,0 +1,266 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.modalTabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  padding: 0 1rem;
+}
+
+.tabButton {
+  padding: 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  border-bottom: 2px solid transparent;
+}
+
+.tabButton.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.form {
+  padding: 1rem;
+}
+
+.tabContent {
+  display: none;
+}
+
+.tabContent.active {
+  display: block;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.formGroup input,
+.formGroup textarea,
+.formGroup select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.modalFooter {
+  padding: 1rem;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submitButton {
+  background: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submitButton:hover {
+  background: #2563eb;
+}
+
+/* Dark mode styles */
+:global(.darkMode) .modal {
+  background: #2d2d2d;
+  color: white;
+}
+
+:global(.darkMode) .formGroup label {
+  color: #e5e7eb;
+}
+
+:global(.darkMode) .formGroup input,
+:global(.darkMode) .formGroup textarea,
+:global(.darkMode) .formGroup select {
+  background: #374151;
+  border-color: #4b5563;
+  color: white;
+}
+
+/* Location search styles */
+.searchBox {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.searchButton {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.searchButton:disabled {
+  background: #9ca3af;
+}
+
+.suggestionsList {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.suggestionItem {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.suggestionItem:hover {
+  background: #f3f4f6;
+}
+
+/* Attendees styles */
+.attendeesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.attendeeGroup {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.userList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.userItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Notification styles */
+.icon {
+  margin-right: 0.5rem;
+}
+
+.select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+}
+
+/* Dark mode additions */
+:global(.darkMode) .suggestionItem:hover {
+  background: #374151;
+}
+
+:global(.darkMode) .searchButton {
+  background: #4b5563;
+}
+
+:global(.darkMode) .searchButton:disabled {
+  background: #6b7280;
+}
+
+.locationTypeSelect {
+  margin-bottom: 1rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  background: #9ca3af;
+}
+
+.spinner {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+}
+
+/* Dark mode additions */
+:global(.darkMode) .button {
+  background: #4b5563;
+}
+
+:global(.darkMode) .button:disabled {
+  background: #6b7280;
+} 

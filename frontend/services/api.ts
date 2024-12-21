@@ -92,6 +92,32 @@ export const ApiService = {
           throw handleApiError(error);
         }
     },
+
+    register: async (username: string, email: string, password: string) => {
+      try {
+        const response = await api.post('/register', {
+          username,
+          email,
+          password
+        });
+        return response.data;
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+
+    getEvents: async (start: string, end: string) => {
+      try {
+        const response = await api.get('/api/events', {
+          params: { start, end }
+        });
+        return response.data; // API now returns array directly
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        throw error;
+      }
+    }
+
 };
 
 function handleApiError(error: unknown): never {

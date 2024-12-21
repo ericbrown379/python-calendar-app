@@ -1,6 +1,6 @@
 # init_db.py
-from app import app, db
-from models import User, Event, Feedback, EventSuggestion, UserPreferences
+from backend.app import app, db
+from backend.models import User, Event, Feedback, EventSuggestion, UserPreferences
 
 def init_database():
     with app.app_context():

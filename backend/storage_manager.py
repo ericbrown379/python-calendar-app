@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from models import Event, db  # Import SQLAlchemy Event model and db
+from backend.models import Event, db  # Import SQLAlchemy Event model and db
 
 class StorageManager:
     """Handles SQLAlchemy database interactions for event storage and retrieval."""

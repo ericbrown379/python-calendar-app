@@ -1,10 +1,10 @@
 # setup_database.py
-from app import app, db
+from backend.app import app, db
 import os
 import shutil
 from sqlalchemy import text, inspect
 from flask_migrate import init, migrate, upgrade, stamp
-from models import User, Event, Feedback, EventSuggestion, UserPreferences
+from backend.models import User, Event, Feedback, EventSuggestion, UserPreferences
 
 def setup_database():
     print("Starting complete database setup...")

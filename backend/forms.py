@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField, TimeField, BooleanField, SelectField, SelectMultipleField, RadioField
 from wtforms.validators import DataRequired, Length, ValidationError, Regexp, Email, EqualTo
-from email_manager import check_email_exists
-from models import User
+from backend.email_manager import check_email_exists
+from backend.models import User
 from wtforms import DateTimeLocalField
 
 

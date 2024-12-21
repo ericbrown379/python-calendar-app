@@ -1,6 +1,6 @@
 # test_db.py
-from app import app, db
-from models import User, Event
+from backend.app import app, db
+from backend.models import User, Event
 from datetime import datetime, date, time
 
 def create_test_event(user_id):
